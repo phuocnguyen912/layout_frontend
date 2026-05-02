@@ -1,11 +1,22 @@
 const STORAGE_KEY = 'ddb-hrm-session';
+const DEFAULT_API_ORIGIN = 'http://localhost';
+
+function resolveApiBaseUrl(envKey, fallbackPort) {
+  const value = import.meta.env[envKey];
+
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim().replace(/\/+$/, '');
+  }
+
+  return `${DEFAULT_API_ORIGIN}:${fallbackPort}/api`;
+}
 
 export const API_PROFILES = {
   publisher: {
     key: 'publisher',
     label: 'Publisher',
     description: 'Quản trị dữ liệu toàn công ty và theo dõi đồng bộ.',
-    baseUrl: 'http://localhost:3000/api',
+    baseUrl: resolveApiBaseUrl('VITE_PUBLISHER_API_URL', 3000),
     defaultUsername: 'publisher_admin',
     defaultPassword: '123456',
     mode: 'publisher',
@@ -14,7 +25,7 @@ export const API_PROFILES = {
     key: 'node_hcm',
     label: 'Chi nhánh HCM',
     description: 'Xử lý nghiệp vụ nhân sự tại chi nhánh TP.HCM.',
-    baseUrl: 'http://localhost:3001/api',
+    baseUrl: resolveApiBaseUrl('VITE_NODE_HCM_API_URL', 3001),
     defaultUsername: 'node_hcm_admin',
     defaultPassword: '123456',
     mode: 'node',
@@ -23,7 +34,7 @@ export const API_PROFILES = {
     key: 'node_hn',
     label: 'Chi nhánh Hà Nội',
     description: 'Xử lý nghiệp vụ nhân sự tại chi nhánh Hà Nội.',
-    baseUrl: 'http://localhost:3002/api',
+    baseUrl: resolveApiBaseUrl('VITE_NODE_HN_API_URL', 3002),
     defaultUsername: 'node_hn_admin',
     defaultPassword: '123456',
     mode: 'node',
@@ -104,37 +115,7 @@ export async function fetchHealth(profileKey) {
   return request(profileKey, '/health');
 }
 
-export async function fetchPublisherOverview(profileKey, token) {
-  const [summary, sync, employees, branches, positions, contractTypes] = await Promise.all([
-    request(profileKey, '/publisher/reports/summary', { token }),
-    request(profileKey, '/publisher/sync-monitor?thresholdMinutes=30', { token }),
-    request(profileKey, '/publisher/company-search', { token }),
-    request(profileKey, '/publisher/branches', { token }),
-    request(profileKey, '/publisher/positions', { token }),
-    request(profileKey, '/publisher/contract-types', { token }),
-  ]);
-
-  return { summary, sync, employees, branches, positions, contractTypes };
-}
-
-export async function fetchNodeOverview(profileKey, token, params = {}) {
-  const query = new URLSearchParams();
-  if (params.keyword) query.set('keyword', params.keyword);
-  if (params.thang) query.set('thang', String(params.thang));
-  if (params.nam) query.set('nam', String(params.nam));
-
-  const suffix = query.toString() ? `?${query.toString()}` : '';
-  const [report, sync, health] = await Promise.all([
-    request(profileKey, `/node/reports/local${suffix}`, { token }),
-    request(profileKey, '/sync/node-to-publisher', { method: 'POST', token }).catch((error) => ({
-      error: error.message,
-    })),
-    fetchHealth(profileKey).catch(() => null),
-  ]);
-
-  return { report, sync, health };
-}
-
+// Publisher API factory
 export function createPublisherApi(profileKey, token) {
   return {
     listBranches: () => request(profileKey, '/publisher/branches', { token }),
@@ -153,13 +134,13 @@ export function createPublisherApi(profileKey, token) {
     createContractType: (body) =>
       request(profileKey, '/publisher/contract-types', { method: 'POST', token, body }),
     createAccount: (body) => request(profileKey, '/publisher/accounts', { method: 'POST', token, body }),
-    triggerNodePull: () => request(profileKey, '/sync/publisher-to-node', { method: 'POST', token }),
-    triggerNodePush: () => request(profileKey, '/sync/node-to-publisher', { method: 'POST', token }),
   };
 }
 
+// Node API factory - Sync phải được trigger từ Node instance
 export function createNodeApi(profileKey, token) {
   return {
+    // ---- Báo cáo & Dữ liệu ----
     localReport: (params = {}) => {
       const query = new URLSearchParams();
       if (params.keyword) query.set('keyword', params.keyword);
@@ -168,15 +149,52 @@ export function createNodeApi(profileKey, token) {
       const suffix = query.toString() ? `?${query.toString()}` : '';
       return request(profileKey, `/node/reports/local${suffix}`, { token });
     },
+
+    listEmployees: (keyword = '') =>
+      request(
+        profileKey,
+        `/node/employees${keyword ? `?keyword=${encodeURIComponent(keyword)}` : ''}`,
+        { token },
+      ),
+
+    listLeaves: (params = {}) => {
+      const query = new URLSearchParams();
+      if (params.trangThai) query.set('trangThai', params.trangThai);
+      if (params.maNhanVien) query.set('maNhanVien', params.maNhanVien);
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return request(profileKey, `/node/leaves${suffix}`, { token });
+    },
+
+    getAttendance: (maNhanVien, params = {}) => {
+      const query = new URLSearchParams();
+      if (params.tuNgay) query.set('tuNgay', params.tuNgay);
+      if (params.denNgay) query.set('denNgay', params.denNgay);
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return request(profileKey, `/node/attendance/${maNhanVien}${suffix}`, { token });
+    },
+
+    syncStatus: () => request(profileKey, '/node/sync/status', { token }),
+
+    // ---- Nhân viên & Hợp đồng ----
     createEmployee: (body) => request(profileKey, '/node/employees', { method: 'POST', token, body }),
     createContract: (body) => request(profileKey, '/node/contracts', { method: 'POST', token, body }),
+
+    // ---- Chấm công ----
     checkIn: (body) => request(profileKey, '/node/attendance/check-in', { method: 'POST', token, body }),
     checkOut: (body) => request(profileKey, '/node/attendance/check-out', { method: 'POST', token, body }),
+
+    // ---- Nghỉ phép ----
     createLeave: (body) => request(profileKey, '/node/leaves', { method: 'POST', token, body }),
     approveLeave: (id, body) =>
       request(profileKey, `/node/leaves/${id}/approval`, { method: 'PUT', token, body }),
+
+    // ---- Lương ----
     generateSalary: (body) => request(profileKey, '/node/salaries/generate', { method: 'POST', token, body }),
+
+    // ---- Sync (chỉ dùng từ Node instance) ----
+    // Node → Publisher: đẩy local pending changes lên Publisher DB
     syncToPublisher: () => request(profileKey, '/sync/node-to-publisher', { method: 'POST', token }),
+    // Publisher → Node: kéo dữ liệu mới từ Publisher về local DB
     syncFromPublisher: () => request(profileKey, '/sync/publisher-to-node', { method: 'POST', token }),
   };
 }

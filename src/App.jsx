@@ -37,6 +37,7 @@ import {
   clearSession,
   createNodeApi,
   createPublisherApi,
+  fetchHealth,
   loadSession,
   login,
   saveSession,
@@ -417,6 +418,10 @@ export default function App() {
     sync: null,
     health: null,
   });
+  const [leaves, setLeaves] = useState([]);
+  const [localEmployees, setLocalEmployees] = useState([]);
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [attendanceList, setAttendanceList] = useState([]);
   const [branchForm, setBranchForm] = useState(defaultBranchForm);
   const [positionForm, setPositionForm] = useState(defaultPositionForm);
   const [contractTypeForm, setContractTypeForm] = useState(defaultContractTypeForm);
@@ -490,14 +495,18 @@ export default function App() {
 
   async function loadNodeData(currentSession, filters = reportFilters) {
     const api = createNodeApi(currentSession.profileKey, currentSession.token);
-    const [report, health] = await Promise.all([
+    const [report, health, leavesResult, empsResult, syncStat] = await Promise.all([
       api.localReport(filters),
-      fetch(`${API_PROFILES[currentSession.profileKey].baseUrl}/health`)
-        .then((response) => response.json())
-        .catch(() => null),
+      fetchHealth(currentSession.profileKey).catch(() => null),
+      api.listLeaves({}).catch(() => []),
+      api.listEmployees().catch(() => []),
+      api.syncStatus().catch(() => null),
     ]);
 
     setNodeData((previous) => ({ ...previous, report, health }));
+    setLeaves(leavesResult);
+    setLocalEmployees(empsResult);
+    setSyncStatus(syncStat);
   }
 
   async function refreshAll(currentSession = session) {
@@ -513,7 +522,12 @@ export default function App() {
         await loadNodeData(currentSession);
       }
     } catch (refreshError) {
-      setError(refreshError.message);
+      if (refreshError.message.includes('Unauthorized') || refreshError.message.includes('invalid token')) {
+        handleLogout();
+        setToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else {
+        setError(refreshError.message);
+      }
     } finally {
       setRefreshing(false);
     }
@@ -555,19 +569,12 @@ export default function App() {
   function handleLogout() {
     clearSession();
     setSession(null);
-    setPublisherData({
-      summary: null,
-      sync: [],
-      employees: [],
-      branches: [],
-      positions: [],
-      contractTypes: [],
-    });
-    setNodeData({
-      report: { employees: [], attendance: [], payroll: [] },
-      sync: null,
-      health: null,
-    });
+    setPublisherData({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [] });
+    setNodeData({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null });
+    setLeaves([]);
+    setLocalEmployees([]);
+    setSyncStatus(null);
+    setAttendanceList([]);
     setError('');
     setToast('');
   }
@@ -582,7 +589,12 @@ export default function App() {
       await refreshAll();
       setToast('Đã cập nhật dữ liệu thành công');
     } catch (actionError) {
-      setError(actionError.message);
+      if (actionError.message.includes('Unauthorized') || actionError.message.includes('invalid token')) {
+        handleLogout();
+        setToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else {
+        setError(actionError.message);
+      }
     } finally {
       setSubmittingKey('');
     }
@@ -788,29 +800,7 @@ export default function App() {
                 <SectionHeader
                   eyebrow="Publisher"
                   title="Dữ liệu dùng chung và tài khoản"
-                  description="Các form này gọi trực tiếp endpoint publisher để tạo chi nhánh, chức vụ, loại hợp đồng và tài khoản."
-                  action={
-                    isPublisher ? (
-                      <div className="flex gap-3">
-                        <Button
-                          variant="secondary"
-                          loading={submittingKey === 'publisher-pull'}
-                          onClick={() => runAction('publisher-pull', () => publisherApi.triggerNodePull())}
-                        >
-                          <ArrowRightLeft className="h-4 w-4" />
-                          {'Node → Publisher'}
-                        </Button>
-                        <Button
-                          variant="accent"
-                          loading={submittingKey === 'publisher-push'}
-                          onClick={() => runAction('publisher-push', () => publisherApi.triggerNodePush())}
-                        >
-                          <GitBranch className="h-4 w-4" />
-                          {'Publisher → Node'}
-                        </Button>
-                      </div>
-                    ) : null
-                  }
+                  description="Quản lý chi nhánh, chức vụ, loại hợp đồng và tài khoản. Sync được thực hiện tại mỗi Node chi nhánh."
                 />
 
                 {!isPublisher ? (
@@ -1028,7 +1018,28 @@ export default function App() {
 
                     <div className="grid gap-6 xl:grid-cols-3">
                       <Panel title="Nhân viên local">
-                        <DataTable columns={[{ key: 'MaNhanVien', label: 'Mã' }, { key: 'HoTen', label: 'Họ tên' }, { key: 'Email', label: 'Email' }]} rows={nodeData.report.employees || []} />
+                        <DataTable
+                          columns={[
+                            { key: 'MaNhanVien', label: 'Mã NV' },
+                            {
+                              key: 'HoTen', label: 'Họ tên',
+                              render: (row) => (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#ecd7cb] text-xs font-semibold text-[#8a3828]">
+                                    {getInitials(row.HoTen)}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-[var(--hr-ink)]">{row.HoTen}</p>
+                                    <p className="text-xs text-[var(--hr-muted)]">{row.TenChucVu || 'N/A'}</p>
+                                  </div>
+                                </div>
+                              ),
+                            },
+                            { key: 'TenPhongBan', label: 'Phòng ban' },
+                            { key: 'Email', label: 'Email' },
+                          ]}
+                          rows={localEmployees}
+                        />
                       </Panel>
                       <Panel title="Tổng hợp chấm công">
                         <DataTable columns={[{ key: 'MaNhanVien', label: 'Mã' }, { key: 'SoNgayChamCong', label: 'Số ngày' }]} rows={nodeData.report.attendance || []} />
@@ -1091,7 +1102,22 @@ export default function App() {
                       </div>
                     </Panel>
 
-                    <Panel title="Nghỉ phép" subtitle="POST `/node/leaves` và PUT `/node/leaves/:id/approval`">
+                    <Panel title="Danh sách đơn nghỉ phép" subtitle="GET `/node/leaves` — Xem mã để duyệt/từ chối">
+                      <DataTable
+                        columns={[
+                          { key: 'MaNghiPhep', label: 'Mã NP' },
+                          { key: 'MaNhanVien', label: 'Mã NV' },
+                          { key: 'HoTen', label: 'Họ tên' },
+                          { key: 'TuNgay', label: 'Từ ngày', render: (row) => formatDateTime(row.TuNgay) },
+                          { key: 'DenNgay', label: 'Đến ngày', render: (row) => formatDateTime(row.DenNgay) },
+                          { key: 'LyDo', label: 'Lý do' },
+                          { key: 'TrangThai', label: 'Trạng thái', render: (row) => <StatusPill status={row.TrangThai} /> },
+                        ]}
+                        rows={leaves}
+                      />
+                    </Panel>
+
+                    <Panel title="Duyệt / Từ chối đơn nghỉ" subtitle="PUT `/node/leaves/:id/approval`">
                       <div className="grid gap-6">
                         <div className="grid gap-4 md:grid-cols-2">
                           <Field label="Mã nhân viên"><Input value={leaveForm.maNhanVien} onChange={(event) => setLeaveForm({ ...leaveForm, maNhanVien: event.target.value })} /></Field>
@@ -1200,57 +1226,76 @@ export default function App() {
                       />
                     ) : (
                       <div className="space-y-4">
+                        {syncStatus ? (
+                          <div className="grid grid-cols-2 gap-3">
+                            {[
+                              { label: 'Chờ sync lên Publisher', value: syncStatus.PendingSync, tone: 'warning' },
+                              { label: 'Offline (chờ kết nối)', value: syncStatus.DeferredOffline, tone: 'danger' },
+                              { label: 'Đã sync thành công', value: syncStatus.DaSynced, tone: 'success' },
+                              { label: 'Xung đột bỏ qua', value: syncStatus.XungDot, tone: 'neutral' },
+                            ].map((item) => (
+                              <div key={item.label} className="rounded-[20px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
+                                <p className="text-2xl font-bold text-[var(--hr-ink)]">{item.value ?? 0}</p>
+                                <p className="mt-1 text-xs text-[var(--hr-muted)]">{item.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                         <div className="rounded-[24px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
                           <p className="font-semibold text-[var(--hr-ink)]">Health</p>
                           <p className="mt-2 text-sm text-[var(--hr-muted)]">Chế độ: {nodeData.health?.mode || 'node'}</p>
                           <p className="mt-1 text-sm text-[var(--hr-muted)]">Thời gian: {formatDateTime(nodeData.health?.timestamp)}</p>
                         </div>
-                        {nodeData.sync?.error ? (
-                          <div className="rounded-[24px] bg-[#f2dfc0] p-4 text-sm text-[#9b6a28]">{nodeData.sync.error}</div>
-                        ) : null}
                       </div>
                     )}
                   </Panel>
 
-                  <Panel title="Tác vụ sync" subtitle="Dùng cho cả publisher và node profile.">
+                  <Panel title="Tác vụ sync" subtitle="Sync chỉ có tác dụng khi đăng nhập profile Node chi nhánh.">
                     <div className="space-y-3">
-                      <Button
-                        variant="accent"
-                        className="w-full"
-                        loading={submittingKey === 'sync-up'}
-                        onClick={() =>
-                          runAction('sync-up', () =>
-                            (isPublisher ? publisherApi.triggerNodePull() : nodeApi.syncToPublisher()), (result) =>
-                              setNodeData((previous) => ({ ...previous, sync: result })),
-                          )
-                        }
-                      >
-                        <ArrowRightLeft className="h-4 w-4" />
-                        Đẩy dữ liệu lên Publisher
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="w-full"
-                        loading={submittingKey === 'sync-down'}
-                        onClick={() =>
-                          runAction('sync-down', () =>
-                            (isPublisher ? publisherApi.triggerNodePush() : nodeApi.syncFromPublisher()), (result) =>
-                              setNodeData((previous) => ({ ...previous, sync: result })),
-                          )
-                        }
-                      >
-                        <ShieldCheck className="h-4 w-4" />
-                        Kéo dữ liệu từ Publisher
-                      </Button>
+                      {isNode ? (
+                        <>
+                          <Button
+                            variant="accent"
+                            className="w-full"
+                            loading={submittingKey === 'sync-up'}
+                            onClick={() =>
+                              runAction('sync-up', () => nodeApi.syncToPublisher(), (result) =>
+                                setNodeData((previous) => ({ ...previous, sync: result })),
+                              )
+                            }
+                          >
+                            <ArrowRightLeft className="h-4 w-4" />
+                            Node → Publisher (Đẩy dữ liệu lên)
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            className="w-full"
+                            loading={submittingKey === 'sync-down'}
+                            onClick={() =>
+                              runAction('sync-down', () => nodeApi.syncFromPublisher(), (result) =>
+                                setNodeData((previous) => ({ ...previous, sync: result })),
+                              )
+                            }
+                          >
+                            <ShieldCheck className="h-4 w-4" />
+                            Publisher → Node (Kéo dữ liệu về)
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="rounded-[20px] border border-[#e5d0b8] bg-[#fdf3e8] p-4 text-sm text-[#9b6a28]">
+                          <p className="font-semibold">Sync chỉ từ Node</p>
+                          <p className="mt-1">Đây là Publisher instance. Sync phải được thực hiện tại Node HCM hoặc Node HN để đảm bảo đúng hướng dữ liệu.</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-5 rounded-[24px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
                       <p className="font-semibold text-[var(--hr-ink)]">Kết quả lần chạy gần nhất</p>
                       {nodeData.sync ? (
                         <div className="mt-3 space-y-2 text-sm text-[#5f534b]">
-                          <p>Tổng: {nodeData.sync.total ?? nodeData.sync.nodeToPublisher?.total ?? 0}</p>
-                          <p>Đã đồng bộ: {nodeData.sync.synced ?? nodeData.sync.nodeToPublisher?.synced ?? 0}</p>
-                          <p>Xung đột: {nodeData.sync.conflicts ?? nodeData.sync.nodeToPublisher?.conflicts ?? 0}</p>
+                          <p>Tổng: {nodeData.sync.total ?? 0}</p>
+                          <p>Đã sync: {nodeData.sync.synced ?? 0}</p>
+                          <p>Xung đột: {nodeData.sync.conflicts ?? 0}</p>
                         </div>
                       ) : (
                         <p className="mt-3 text-sm text-[var(--hr-muted)]">Chưa chạy sync từ giao diện.</p>
