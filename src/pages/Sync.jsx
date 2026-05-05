@@ -1,0 +1,110 @@
+import { ArrowRightLeft, ShieldCheck } from 'lucide-react';
+import SectionHeader from '../components/ui/SectionHeader';
+import Panel from '../components/ui/Panel';
+import Button from '../components/ui/Button';
+import DataTable from '../components/ui/DataTable';
+import StatusPill from '../components/ui/StatusPill';
+import { formatDateTime } from '../utils/format';
+
+export default function Sync({ isPublisher, isNode, nodeApi, session, publisherData, nodeData, setNodeData, syncStatus, runAction, submittingKey }) {
+  return (
+    <>
+      <SectionHeader
+        eyebrow="Đồng bộ"
+        title="Đồng bộ hai chiều"
+        description="Có thể monitor ở Publisher hoặc trigger sync trực tiếp ở node."
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Panel title="Trạng thái đồng bộ">
+          {isPublisher ? (
+            <DataTable
+              columns={[
+                { key: 'Node', label: 'Node' },
+                { key: 'LastSyncTime', label: 'Lần cuối', render: (row) => formatDateTime(row.LastSyncTime) },
+                { key: 'TrangThai', label: 'Trạng thái', render: (row) => <StatusPill status={row.TrangThai} /> },
+              ]}
+              rows={publisherData.sync}
+            />
+          ) : (
+            <div className="space-y-4">
+              {syncStatus ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Chờ sync lên Publisher', value: syncStatus.PendingSync, tone: 'warning' },
+                    { label: 'Offline (chờ kết nối)', value: syncStatus.DeferredOffline, tone: 'danger' },
+                    { label: 'Đã sync thành công', value: syncStatus.DaSynced, tone: 'success' },
+                    { label: 'Xung đột bỏ qua', value: syncStatus.XungDot, tone: 'neutral' },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[20px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
+                      <p className="text-2xl font-bold text-[var(--hr-ink)]">{item.value ?? 0}</p>
+                      <p className="mt-1 text-xs text-[var(--hr-muted)]">{item.label}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="rounded-[24px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
+                <p className="font-semibold text-[var(--hr-ink)]">Health</p>
+                <p className="mt-2 text-sm text-[var(--hr-muted)]">Chế độ: {nodeData.health?.mode || 'node'}</p>
+                <p className="mt-1 text-sm text-[var(--hr-muted)]">Thời gian: {formatDateTime(nodeData.health?.timestamp)}</p>
+              </div>
+            </div>
+          )}
+        </Panel>
+
+        <Panel title="Tác vụ sync" subtitle="Sync chỉ có tác dụng khi đăng nhập profile Node chi nhánh.">
+          <div className="space-y-3">
+            {isNode ? (
+              <>
+                <Button
+                  variant="accent"
+                  className="w-full"
+                  loading={submittingKey === 'sync-up'}
+                  onClick={() =>
+                    runAction('sync-up', () => nodeApi.syncToPublisher(), (result) =>
+                      setNodeData((previous) => ({ ...previous, sync: result })),
+                    )
+                  }
+                >
+                  <ArrowRightLeft className="h-4 w-4" />
+                  Node → Publisher (Đẩy dữ liệu lên)
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  loading={submittingKey === 'sync-down'}
+                  onClick={() =>
+                    runAction('sync-down', () => nodeApi.syncFromPublisher(), (result) =>
+                      setNodeData((previous) => ({ ...previous, sync: result })),
+                    )
+                  }
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Publisher → Node (Kéo dữ liệu về)
+                </Button>
+              </>
+            ) : (
+              <div className="rounded-[20px] border border-[#e5d0b8] bg-[#fdf3e8] p-4 text-sm text-[#9b6a28]">
+                <p className="font-semibold">Sync chỉ từ Node</p>
+                <p className="mt-1">Đây là Publisher instance. Sync phải được thực hiện tại Node HCM hoặc Node HN để đảm bảo đúng hướng dữ liệu.</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 rounded-[24px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
+            <p className="font-semibold text-[var(--hr-ink)]">Kết quả lần chạy gần nhất</p>
+            {nodeData.sync ? (
+              <div className="mt-3 space-y-2 text-sm text-[#5f534b]">
+                <p>Tổng: {nodeData.sync.total ?? 0}</p>
+                <p>Đã sync: {nodeData.sync.synced ?? 0}</p>
+                <p>Xung đột: {nodeData.sync.conflicts ?? 0}</p>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-[var(--hr-muted)]">Chưa chạy sync từ giao diện.</p>
+            )}
+          </div>
+        </Panel>
+      </div>
+    </>
+  );
+}
