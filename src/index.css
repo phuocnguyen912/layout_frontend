@@ -1,16 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Fraunces:wght@600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
+  --hr-ink: #201a17;
+  --hr-muted: #6f6259;
+  --hr-paper: #f7f1e8;
+  --hr-panel: rgba(255, 250, 243, 0.88);
+  --hr-accent: #b55233;
+  --hr-accent-soft: #eed9cc;
+  --hr-olive: #7f8a63;
+  --hr-border: rgba(86, 63, 49, 0.12);
 }
 
 body {
-  @apply bg-slate-100 text-slate-900 antialiased;
+  font-family: 'Be Vietnam Pro', sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(181, 82, 51, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(127, 138, 99, 0.22), transparent 28%),
+    linear-gradient(180deg, #f9f2e7 0%, #efe3d2 100%);
+  color: var(--hr-ink);
+  @apply antialiased;
 }
 
 ::selection {
-  background: #bfdbfe;
-  color: #1e3a8a;
+  background: #d9b59f;
+  color: #201a17;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Fraunces', serif;
+  letter-spacing: -0.02em;
 }
