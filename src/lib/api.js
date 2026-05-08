@@ -41,6 +41,11 @@ export const API_PROFILES = {
   },
 };
 
+const NODE_BRANCH_CODES = {
+  node_hcm: 'CNHCM',
+  node_hn: 'CNHN',
+};
+
 function buildHeaders(token, extraHeaders = {}) {
   return {
     'Content-Type': 'application/json',
@@ -79,6 +84,48 @@ async function request(profileKey, path, { method = 'GET', token, body, headers 
   });
 
   return parseResponse(response);
+}
+
+function blankToUndefined(value) {
+  return typeof value === 'string' && value.trim() === '' ? undefined : value;
+}
+
+function normalizeEmployeeBody(profileKey, body = {}) {
+  return {
+    ...body,
+    maNhanVien: blankToUndefined(body.maNhanVien),
+    hoTen: blankToUndefined(body.hoTen),
+    ngaySinh: blankToUndefined(body.ngaySinh),
+    gioiTinh: blankToUndefined(body.gioiTinh),
+    sdt: blankToUndefined(body.sdt),
+    email: blankToUndefined(body.email),
+    maPhongBan: blankToUndefined(body.maPhongBan),
+    maChucVu: blankToUndefined(body.maChucVu),
+    ngayVaoLam: blankToUndefined(body.ngayVaoLam),
+    maChiNhanh: NODE_BRANCH_CODES[profileKey] || blankToUndefined(body.maChiNhanh),
+  };
+}
+
+function normalizeContractBody(body = {}) {
+  return {
+    ...body,
+    maHopDong: blankToUndefined(body.maHopDong),
+    maNhanVien: blankToUndefined(body.maNhanVien),
+    maLoaiHopDong: blankToUndefined(body.maLoaiHopDong),
+    ngayBatDau: blankToUndefined(body.ngayBatDau),
+    ngayKetThuc: blankToUndefined(body.ngayKetThuc),
+    trangThai: blankToUndefined(body.trangThai),
+  };
+}
+
+function normalizeLeaveBody(body = {}) {
+  return {
+    ...body,
+    maNhanVien: blankToUndefined(body.maNhanVien),
+    tuNgay: blankToUndefined(body.tuNgay),
+    denNgay: blankToUndefined(body.denNgay),
+    lyDo: blankToUndefined(body.lyDo),
+  };
 }
 
 export function saveSession(session) {
@@ -153,17 +200,11 @@ export function createNodeApi(profileKey, token) {
     listEmployees: (keyword = '') =>
       request(
         profileKey,
-        `/node/employees${keyword ? `?keyword=${encodeURIComponent(keyword)}` : ''}`,
+        `/node/reports/local${keyword ? `?keyword=${encodeURIComponent(keyword)}` : ''}`,
         { token },
-      ),
+      ).then((result) => result?.employees || []),
 
-    listLeaves: (params = {}) => {
-      const query = new URLSearchParams();
-      if (params.trangThai) query.set('trangThai', params.trangThai);
-      if (params.maNhanVien) query.set('maNhanVien', params.maNhanVien);
-      const suffix = query.toString() ? `?${query.toString()}` : '';
-      return request(profileKey, `/node/leaves${suffix}`, { token });
-    },
+    listLeaves: async () => [],
 
     getAttendance: (maNhanVien, params = {}) => {
       const query = new URLSearchParams();
@@ -173,20 +214,38 @@ export function createNodeApi(profileKey, token) {
       return request(profileKey, `/node/attendance/${maNhanVien}${suffix}`, { token });
     },
 
-    syncStatus: () => request(profileKey, '/node/sync/status', { token }),
+    syncStatus: async () => null,
 
     // ---- Nhân viên & Hợp đồng ----
-    createEmployee: (body) => request(profileKey, '/node/employees', { method: 'POST', token, body }),
-    createContract: (body) => request(profileKey, '/node/contracts', { method: 'POST', token, body }),
+    createEmployee: (body) =>
+      request(profileKey, '/node/employees', {
+        method: 'POST',
+        token,
+        body: normalizeEmployeeBody(profileKey, body),
+      }),
+    createContract: (body) =>
+      request(profileKey, '/node/contracts', {
+        method: 'POST',
+        token,
+        body: normalizeContractBody(body),
+      }),
 
     // ---- Chấm công ----
     checkIn: (body) => request(profileKey, '/node/attendance/check-in', { method: 'POST', token, body }),
     checkOut: (body) => request(profileKey, '/node/attendance/check-out', { method: 'POST', token, body }),
 
     // ---- Nghỉ phép ----
-    createLeave: (body) => request(profileKey, '/node/leaves', { method: 'POST', token, body }),
+    createLeave: (body) => {
+      const normalizedBody = normalizeLeaveBody(body);
+      return request(profileKey, '/node/leaves', {
+        method: 'POST',
+        token,
+        body: normalizedBody,
+      }).then((result) => ({ ...normalizedBody, ...result }));
+    },
     approveLeave: (id, body) =>
-      request(profileKey, `/node/leaves/${id}/approval`, { method: 'PUT', token, body }),
+      request(profileKey, `/node/leaves/${id}/approval`, { method: 'PUT', token, body })
+        .then((result) => ({ maNghiPhep: id, ...result })),
 
     // ---- Lương ----
     generateSalary: (body) => request(profileKey, '/node/salaries/generate', { method: 'POST', token, body }),
