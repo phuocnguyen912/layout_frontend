@@ -58,16 +58,16 @@ export default function Attendance({ isNode, nodeApi, leaves, runAction, submitt
       <SectionHeader
         eyebrow="Attendance"
         title="Chấm công, nghỉ phép, tính lương"
-        description="Toàn bộ thao tác nghiệp vụ node được gom vào một khu giao diện để nhập nhanh."
+        description="Theo dõi công, xử lý nghỉ phép và tính lương cho nhân sự tại chi nhánh."
       />
 
       {!isNode ? (
-        <Panel title="Cần profile node" subtitle="Chấm công và tính lương là endpoint của node.">
+        <Panel title="Cần profile node" subtitle="Chức năng này chỉ dùng tại môi trường chi nhánh.">
           <p className="text-sm text-[var(--hr-muted)]">Đăng nhập môi trường chi nhánh để sử dụng module này.</p>
         </Panel>
       ) : (
         <div className="grid gap-6 xl:grid-cols-2">
-          <Panel title="Check-in / Check-out" subtitle="POST `/node/attendance/check-in` và `/check-out`">
+          <Panel title="Check-in / Check-out" subtitle="Ghi nhận giờ vào và giờ ra của nhân viên.">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Mã nhân viên"><Input value={attendanceForm.maNhanVien} onChange={(event) => setAttendanceForm({ ...attendanceForm, maNhanVien: event.target.value })} /></Field>
               <Field label="Ngày"><Input type="date" value={attendanceForm.ngay} onChange={(event) => setAttendanceForm({ ...attendanceForm, ngay: event.target.value })} /></Field>
@@ -102,7 +102,7 @@ export default function Attendance({ isNode, nodeApi, leaves, runAction, submitt
             </div>
           </Panel>
 
-          <Panel title="Danh sách đơn nghỉ phép" subtitle="GET `/node/leaves` — Xem mã để duyệt/từ chối">
+          <Panel title="Danh sách đơn nghỉ phép" subtitle="Theo dõi các đơn đang chờ xử lý.">
             <DataTable
               columns={[
                 { key: 'MaNghiPhep', label: 'Mã NP' },
@@ -117,7 +117,7 @@ export default function Attendance({ isNode, nodeApi, leaves, runAction, submitt
             />
           </Panel>
 
-          <Panel title="Duyệt / Từ chối đơn nghỉ" subtitle="PUT `/node/leaves/:id/approval`">
+          <Panel title="Duyệt / Từ chối đơn nghỉ" subtitle="Cập nhật trạng thái theo mã đơn nghỉ phép.">
             <div className="grid gap-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Mã nhân viên"><Input value={leaveForm.maNhanVien} onChange={(event) => setLeaveForm({ ...leaveForm, maNhanVien: event.target.value })} /></Field>
@@ -156,7 +156,7 @@ export default function Attendance({ isNode, nodeApi, leaves, runAction, submitt
             </div>
           </Panel>
 
-          <Panel title="Tính lương" subtitle="POST `/node/salaries/generate`">
+          <Panel title="Tính lương" subtitle="Tạo bảng lương theo kỳ đã chọn.">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Mã nhân viên"><Input value={salaryForm.maNhanVien} onChange={(event) => setSalaryForm({ ...salaryForm, maNhanVien: event.target.value })} /></Field>
               <Field label="Tháng"><Input type="number" value={salaryForm.thang} onChange={(event) => setSalaryForm({ ...salaryForm, thang: Number(event.target.value) })} /></Field>
@@ -183,7 +183,7 @@ export default function Attendance({ isNode, nodeApi, leaves, runAction, submitt
             </Button>
           </Panel>
 
-          <Panel title="Lương theo nhân viên" subtitle="Biểu đồ từ kết quả báo cáo local đang nạp.">
+          <Panel title="Lương theo nhân viên" subtitle="Biểu đồ tổng lương trong kỳ hiện tại.">
             {payrollChartData.length > 0 ? (
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
@@ -197,7 +197,7 @@ export default function Attendance({ isNode, nodeApi, leaves, runAction, submitt
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-sm text-[var(--hr-muted)]">Chưa có dữ liệu payroll trong kỳ lọc hiện tại.</p>
+              <p className="text-sm text-[var(--hr-muted)]">Chưa có dữ liệu lương trong kỳ lọc hiện tại.</p>
             )}
           </Panel>
         </div>

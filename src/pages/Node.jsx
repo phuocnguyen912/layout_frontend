@@ -47,7 +47,7 @@ export default function Node({ isNode, nodeApi, nodeData, setNodeData, localEmpl
       <SectionHeader
         eyebrow="Chi nhánh"
         title="Nhân viên, hợp đồng, báo cáo local"
-        description="Module này tập trung vào các endpoint node cho HR manager và node admin."
+        description="Quản lý hồ sơ nhân viên, hợp đồng và báo cáo tại chi nhánh."
       />
 
       {!isNode ? (
@@ -57,7 +57,7 @@ export default function Node({ isNode, nodeApi, nodeData, setNodeData, localEmpl
       ) : (
         <>
           <div className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Tạo nhân viên" subtitle="POST `/node/employees`">
+            <Panel title="Tạo nhân viên" subtitle="Thêm hồ sơ nhân sự mới vào chi nhánh.">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {
@@ -85,7 +85,7 @@ export default function Node({ isNode, nodeApi, nodeData, setNodeData, localEmpl
               </form>
             </Panel>
 
-            <Panel title="Tạo hợp đồng" subtitle="POST `/node/contracts`">
+            <Panel title="Tạo hợp đồng" subtitle="Ghi nhận hợp đồng lao động cho nhân viên.">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {
@@ -106,7 +106,7 @@ export default function Node({ isNode, nodeApi, nodeData, setNodeData, localEmpl
 
           <Panel
             title="Bộ lọc báo cáo local"
-            subtitle="GET `/node/reports/local`"
+            subtitle="Lọc nhanh nhân sự, chấm công và lương theo kỳ."
             action={
               <Button
                 variant="secondary"

@@ -7,12 +7,19 @@ import StatusPill from '../components/ui/StatusPill';
 import { formatDateTime } from '../utils/format';
 
 export default function Sync({ isPublisher, isNode, nodeApi, session, publisherData, nodeData, setNodeData, syncStatus, runAction, submittingKey }) {
+  const nodeSyncStatusCards = [
+    { label: 'Chờ sync lên Publisher', value: syncStatus?.PendingSync, tone: 'warning' },
+    { label: 'Offline (chờ kết nối)', value: syncStatus?.DeferredOffline, tone: 'danger' },
+    { label: 'Đã sync thành công', value: syncStatus?.DaSynced, tone: 'success' },
+    { label: 'Xung đột bỏ qua', value: syncStatus?.XungDot, tone: 'neutral' },
+  ];
+
   return (
     <>
       <SectionHeader
         eyebrow="Đồng bộ"
         title="Đồng bộ hai chiều"
-        description="Có thể monitor ở Publisher hoặc trigger sync trực tiếp ở node."
+        description="Theo dõi và chạy đồng bộ dữ liệu giữa chi nhánh và trung tâm."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -28,23 +35,16 @@ export default function Sync({ isPublisher, isNode, nodeApi, session, publisherD
             />
           ) : (
             <div className="space-y-4">
-              {syncStatus ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: 'Chờ sync lên Publisher', value: syncStatus.PendingSync, tone: 'warning' },
-                    { label: 'Offline (chờ kết nối)', value: syncStatus.DeferredOffline, tone: 'danger' },
-                    { label: 'Đã sync thành công', value: syncStatus.DaSynced, tone: 'success' },
-                    { label: 'Xung đột bỏ qua', value: syncStatus.XungDot, tone: 'neutral' },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-[20px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
-                      <p className="text-2xl font-bold text-[var(--hr-ink)]">{item.value ?? 0}</p>
-                      <p className="mt-1 text-xs text-[var(--hr-muted)]">{item.label}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              <div className="grid grid-cols-2 gap-3">
+                {nodeSyncStatusCards.map((item) => (
+                  <div key={item.label} className="rounded-[20px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
+                    <p className="text-2xl font-bold text-[var(--hr-ink)]">{item.value ?? '-'}</p>
+                    <p className="mt-1 text-xs text-[var(--hr-muted)]">{item.label}</p>
+                  </div>
+                ))}
+              </div>
               <div className="rounded-[24px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
-                <p className="font-semibold text-[var(--hr-ink)]">Health</p>
+                <p className="font-semibold text-[var(--hr-ink)]">Tình trạng kết nối</p>
                 <p className="mt-2 text-sm text-[var(--hr-muted)]">Chế độ: {nodeData.health?.mode || 'node'}</p>
                 <p className="mt-1 text-sm text-[var(--hr-muted)]">Thời gian: {formatDateTime(nodeData.health?.timestamp)}</p>
               </div>
@@ -52,7 +52,7 @@ export default function Sync({ isPublisher, isNode, nodeApi, session, publisherD
           )}
         </Panel>
 
-        <Panel title="Tác vụ sync" subtitle="Sync chỉ có tác dụng khi đăng nhập profile Node chi nhánh.">
+        <Panel title="Tác vụ đồng bộ" subtitle="Chạy đồng bộ khi đang ở môi trường chi nhánh.">
           <div className="space-y-3">
             {isNode ? (
               <>
@@ -85,8 +85,8 @@ export default function Sync({ isPublisher, isNode, nodeApi, session, publisherD
               </>
             ) : (
               <div className="rounded-[20px] border border-[#e5d0b8] bg-[#fdf3e8] p-4 text-sm text-[#9b6a28]">
-                <p className="font-semibold">Sync chỉ từ Node</p>
-                <p className="mt-1">Đây là Publisher instance. Sync phải được thực hiện tại Node HCM hoặc Node HN để đảm bảo đúng hướng dữ liệu.</p>
+                <p className="font-semibold">Cần môi trường chi nhánh</p>
+                <p className="mt-1">Chuyển sang Node HCM hoặc Node HN để chạy đồng bộ dữ liệu.</p>
               </div>
             )}
           </div>
