@@ -20,6 +20,10 @@ const menuItems = [
 export default function Sidebar({ session, activePage, setActivePage, handleLogout }) {
   if (!session) return null;
 
+  const visibleMenuItems = session.profile.mode === 'publisher'
+    ? menuItems.filter((item) => !['node', 'attendance'].includes(item.key))
+    : menuItems.filter((item) => item.key !== 'publisher');
+
   return (
     <aside className="border-b border-white/50 bg-[#241d19] px-5 py-6 text-white xl:min-h-screen xl:border-b-0 xl:border-r xl:border-white/10">
       <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
@@ -29,7 +33,7 @@ export default function Sidebar({ session, activePage, setActivePage, handleLogo
       </div>
 
       <div className="mt-8 space-y-2">
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const Icon = item.icon;
           const active = item.key === activePage;
           return (

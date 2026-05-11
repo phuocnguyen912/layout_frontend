@@ -22,11 +22,11 @@ export default function Overview({ isPublisher, publisherData, nodeData, session
       <SectionHeader
         eyebrow="Tổng quan"
         title="Tổng quan hệ thống HRM"
-        description="Bộ KPI, biểu đồ và danh sách chính được tạo từ dữ liệu backend thay vì mock data."
+        description="Bộ KPI, biểu đồ và danh sách chính được tổng hợp từ dữ liệu vận hành."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        <Panel title="Phân bổ nhân sự theo chi nhánh" subtitle="Lấy từ `/publisher/reports/summary` nếu đang ở Publisher.">
+        <Panel title="Phân bổ nhân sự theo chi nhánh" subtitle="Tổng hợp số lượng nhân sự ở từng chi nhánh.">
           {branchChartData.length > 0 ? (
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
@@ -48,7 +48,7 @@ export default function Overview({ isPublisher, publisherData, nodeData, session
           )}
         </Panel>
 
-        <Panel title="Trạng thái sync / health" subtitle="Tổng hợp monitor đồng bộ và health endpoint.">
+        <Panel title="Trạng thái đồng bộ" subtitle="Theo dõi kết nối và lần đồng bộ gần nhất.">
           <div className="space-y-4">
             {(isPublisher ? publisherData.sync : []).length > 0 ? (
               publisherData.sync.map((item) => (
@@ -73,7 +73,7 @@ export default function Overview({ isPublisher, publisherData, nodeData, session
         </Panel>
       </div>
 
-      <Panel title="Danh sách nhân sự / tìm kiếm" subtitle="Publisher dùng `company-search`, Node dùng `reports/local`.">
+      <Panel title="Danh sách nhân sự / tìm kiếm" subtitle="Tra cứu nhân sự theo môi trường hiện tại.">
         <DataTable
           columns={[
             {
@@ -104,7 +104,7 @@ export default function Overview({ isPublisher, publisherData, nodeData, session
       </Panel>
 
       {payrollChartData.length > 0 ? (
-        <Panel title="Top payroll theo kỳ lọc" subtitle="Lấy từ `/node/reports/local` của node hiện tại.">
+        <Panel title="Top lương theo kỳ lọc" subtitle="Các nhân viên có tổng lương cao trong kỳ hiện tại.">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={payrollChartData}>

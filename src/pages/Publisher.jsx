@@ -54,7 +54,7 @@ export default function Publisher({ isPublisher, publisherApi, publisherData, ru
       ) : (
         <>
           <div className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Tạo chi nhánh" subtitle="POST `/publisher/branches`">
+            <Panel title="Tạo chi nhánh" subtitle="Thêm chi nhánh mới vào hệ thống.">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {
@@ -77,7 +77,7 @@ export default function Publisher({ isPublisher, publisherApi, publisherData, ru
               </form>
             </Panel>
 
-            <Panel title="Tạo chức vụ" subtitle="POST `/publisher/positions`">
+            <Panel title="Tạo chức vụ" subtitle="Khai báo chức vụ và hệ số lương.">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {
@@ -103,7 +103,7 @@ export default function Publisher({ isPublisher, publisherApi, publisherData, ru
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Tạo loại hợp đồng" subtitle="POST `/publisher/contract-types`">
+            <Panel title="Tạo loại hợp đồng" subtitle="Thiết lập loại hợp đồng dùng chung.">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {
@@ -127,7 +127,7 @@ export default function Publisher({ isPublisher, publisherApi, publisherData, ru
               </form>
             </Panel>
 
-            <Panel title="Tạo tài khoản" subtitle="POST `/publisher/accounts`">
+            <Panel title="Tạo tài khoản" subtitle="Cấp tài khoản truy cập theo vai trò.">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {

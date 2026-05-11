@@ -60,7 +60,7 @@ export default function App() {
       const { token, user } = await login(profileKey, { username, password });
       const s = { profileKey, profile: API_PROFILES[profileKey], token, user };
       saveSession(s); setSession(s);
-      setUi(p => ({ ...p, msg: `Đăng nhập thành công ${API_PROFILES[profileKey].label}` }));
+      setUi(p => ({ ...p, page: 'overview', msg: `Đăng nhập thành công ${API_PROFILES[profileKey].label}` }));
     } catch (e) { setUi(p => ({ ...p, err: e.message })); }
     finally { setUi(p => ({ ...p, load: false })); }
   };
@@ -70,7 +70,7 @@ export default function App() {
     setPub({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [] });
     setNode({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null });
     setLeaves([]); setLocalEmps([]); setSyncStatus(null);
-    setUi(p => ({ ...p, err: '', msg }));
+    setUi(p => ({ ...p, page: 'overview', err: '', msg }));
   };
 
   const runAction = async (key, action, onOk) => {
@@ -125,22 +125,24 @@ export default function App() {
 
   const pages = {
     overview: <Overview {...sharedProps} filteredCompanyEmployees={filteredEmps} branchChartData={branchChart} payrollChartData={payrollChart} />,
-    publisher: <Publisher {...sharedProps} {...apiProps} />,
+    ...(isPub ? { publisher: <Publisher {...sharedProps} {...apiProps} /> } : {}),
     node: <NodePage {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={localEmps} />,
     attendance: <Attendance {...sharedProps} {...apiProps} leaves={leaves} localEmployees={localEmps} payrollChartData={payrollChart} />,
     sync: <Sync {...sharedProps} {...apiProps} setNodeData={setNode} syncStatus={syncStatus} />
   };
 
+  const activePage = pages[ui.page] ? ui.page : 'overview';
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(181,82,51,0.16),_transparent_25%),radial-gradient(circle_at_bottom_right,_rgba(127,138,99,0.18),_transparent_30%),linear-gradient(180deg,#f8f1e8_0%,#efdfcd_100%)] text-[var(--hr-ink)]">
       <div className="mx-auto grid min-h-screen max-w-[1600px] xl:grid-cols-[300px_minmax(0,1fr)]">
-        <Sidebar session={session} activePage={ui.page} setActivePage={page => setUi(p => ({ ...p, page }))} handleLogout={() => handleLogout()} />
+        <Sidebar session={session} activePage={activePage} setActivePage={page => setUi(p => ({ ...p, page }))} handleLogout={() => handleLogout()} />
         <div className="px-4 py-4 sm:px-6 lg:px-8">
           <Header search={ui.search} setSearch={search => setUi(p => ({ ...p, search }))} refreshing={ui.load} refreshAll={() => refreshAll()} />
           {ui.msg && <div className="mb-4 rounded-2xl bg-[#dce7d4] px-4 py-3 text-sm text-[#4d5d39]">{ui.msg}</div>}
           {ui.err && <div className="mb-4 rounded-2xl bg-[#f3d9d2] px-4 py-3 text-sm text-[#8a3828]">{ui.err}</div>}
           <DashboardStats totalEmployees={isPub ? filteredEmps.length : (node.report.employees || []).length} totalAttendance={totalAtt} totalPayroll={totalPay} isPublisher={isPub} />
-          <main className="mt-6 space-y-6">{pages[ui.page]}</main>
+          <main className="mt-6 space-y-6">{pages[activePage]}</main>
         </div>
       </div>
     </div>
