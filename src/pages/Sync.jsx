@@ -7,12 +7,7 @@ import StatusPill from '../components/ui/StatusPill';
 import { formatDateTime } from '../utils/format';
 
 export default function Sync({ isPublisher, isNode, nodeApi, session, publisherData, nodeData, setNodeData, syncStatus, runAction, submittingKey }) {
-  const nodeSyncStatusCards = [
-    { label: 'Chờ sync lên Publisher', value: syncStatus?.PendingSync, tone: 'warning' },
-    { label: 'Offline (chờ kết nối)', value: syncStatus?.DeferredOffline, tone: 'danger' },
-    { label: 'Đã sync thành công', value: syncStatus?.DaSynced, tone: 'success' },
-    { label: 'Xung đột bỏ qua', value: syncStatus?.XungDot, tone: 'neutral' },
-  ];
+ 
 
   return (
     <>
@@ -35,14 +30,7 @@ export default function Sync({ isPublisher, isNode, nodeApi, session, publisherD
             />
           ) : (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                {nodeSyncStatusCards.map((item) => (
-                  <div key={item.label} className="rounded-[20px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
-                    <p className="text-2xl font-bold text-[var(--hr-ink)]">{item.value ?? '-'}</p>
-                    <p className="mt-1 text-xs text-[var(--hr-muted)]">{item.label}</p>
-                  </div>
-                ))}
-              </div>
+             
               <div className="rounded-[24px] border border-[#e0d0c1] bg-[#fbf5ee] p-4">
                 <p className="font-semibold text-[var(--hr-ink)]">Tình trạng kết nối</p>
                 <p className="mt-2 text-sm text-[var(--hr-muted)]">Chế độ: {nodeData.health?.mode || 'node'}</p>
