@@ -38,14 +38,13 @@ export default function App() {
       } else {
         const a = createNodeApi(s.profileKey, s.token);
         const d = new Date();
-        const [report, health, l, e, sync] = await Promise.all([
+        const [report, health] = await Promise.all([
           a.localReport({ keyword: '', thang: d.getMonth() + 1, nam: d.getFullYear() }),
           fetchHealth(s.profileKey).catch(() => null),
-          a.listLeaves({}).catch(() => []),
-          a.listEmployees().catch(() => []),
-          a.syncStatus().catch(() => null),
         ]);
-        setNode(p => ({ ...p, report, health })); setLeaves(l); setLocalEmps(e); setSyncStatus(sync);
+        setNode(p => ({ ...p, report, health }));
+        setLocalEmps(report?.employees || []);
+        setSyncStatus(null);
       }
     } catch (e) {
       if (/token|Unauthorized/i.test(e.message)) handleLogout('Phiên hết hạn.');
@@ -79,6 +78,28 @@ export default function App() {
     try {
       const res = await action();
       if (onOk) onOk(res);
+      if (key === 'leave-request' && res?.maNghiPhep) {
+        setLeaves((previous) => [
+          {
+            MaNghiPhep: res.maNghiPhep,
+            MaNhanVien: res.maNhanVien,
+            TuNgay: res.tuNgay,
+            DenNgay: res.denNgay,
+            LyDo: res.lyDo,
+            TrangThai: 'CHO_DUYET',
+          },
+          ...previous,
+        ]);
+      }
+      if (key === 'leave-approval') {
+        setLeaves((previous) =>
+          previous.map((item) =>
+            String(item.MaNghiPhep) === String(res?.maNghiPhep)
+              ? { ...item, TrangThai: res?.trangThai || item.TrangThai }
+              : item,
+          ),
+        );
+      }
       await refreshAll();
       setUi(p => ({ ...p, msg: 'Cập nhật thành công' }));
     } catch (e) {
@@ -106,7 +127,7 @@ export default function App() {
     overview: <Overview {...sharedProps} filteredCompanyEmployees={filteredEmps} branchChartData={branchChart} payrollChartData={payrollChart} />,
     ...(isPub ? { publisher: <Publisher {...sharedProps} {...apiProps} /> } : {}),
     node: <NodePage {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={localEmps} />,
-    attendance: <Attendance {...sharedProps} {...apiProps} leaves={leaves} payrollChartData={payrollChart} />,
+    attendance: <Attendance {...sharedProps} {...apiProps} leaves={leaves} localEmployees={localEmps} payrollChartData={payrollChart} />,
     sync: <Sync {...sharedProps} {...apiProps} setNodeData={setNode} syncStatus={syncStatus} />
   };
 
