@@ -47,7 +47,6 @@ export default function LoginScreen({ onLogin, pending, error }) {
           <div className="rounded-2xl border border-[#eadbcc] bg-[#fbf5ee] px-4 py-3">
             <p className="text-sm font-semibold text-[#4f433b]">{API_PROFILES[profileKey].label}</p>
             <p className="mt-1 text-sm text-[var(--hr-muted)]">{API_PROFILES[profileKey].description}</p>
-            <p className="mt-1 text-xs text-[#8c7b6c]">{API_PROFILES[profileKey].baseUrl}</p>
           </div>
 
           <Field label="Tên đăng nhập">

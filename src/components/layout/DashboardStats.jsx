@@ -22,7 +22,7 @@ export default function DashboardStats({ totalEmployees, totalAttendance, totalP
       <StatCard 
         title="Quỹ lương" 
         value={formatCurrency(totalPayroll)} 
-        hint="Dữ liệu tính từ API tổng hợp hiện có." 
+        hint="Tổng lương theo dữ liệu hiện có." 
         icon={WalletCards} 
         tone="amber" 
       />

@@ -9,7 +9,7 @@ export default function Header({ search, setSearch, refreshing, refreshAll }) {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#9a4f35]">Giao diện vận hành</p>
           <h2 className="mt-2 text-3xl font-semibold text-[var(--hr-ink)]">Quản lý nhân sự phân tán</h2>
-          <p className="mt-2 text-sm text-[var(--hr-muted)]">Frontend đang gọi trực tiếp backend `distributed` theo môi trường đã chọn.</p>
+          <p className="mt-2 text-sm text-[var(--hr-muted)]">Theo dõi nhân sự, chi nhánh và đồng bộ dữ liệu trong một giao diện.</p>
         </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <Input
