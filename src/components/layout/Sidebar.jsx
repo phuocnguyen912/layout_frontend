@@ -1,31 +1,42 @@
+import { useState } from 'react';
 import {
   ArrowRightLeft,
+  BriefcaseBusiness,
   Building2,
   CalendarClock,
-  ChevronRight,
+  FileText,
+  HandCoins,
   LayoutDashboard,
   LogOut,
+  Menu,
   Users,
+  X,
 } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import Button from '../ui/Button';
 
 const menuItems = [
-  { key: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
-  { key: 'publisher', label: 'Publisher', icon: Building2 },
-  { key: 'node', label: 'Nghiệp vụ chi nhánh', icon: Users },
-  { key: 'attendance', label: 'Chấm công', icon: CalendarClock },
-  { key: 'sync', label: 'Đồng bộ', icon: ArrowRightLeft },
+  { key: 'overview', path: '/', label: 'Tổng quan', icon: LayoutDashboard },
+  { key: 'publisher', path: '/publisher', label: 'Publisher', icon: Building2 },
+  { key: 'node', path: '/employees', label: 'Nghiệp vụ chi nhánh', icon: Users },
+  { key: 'attendance', path: '/attendance', label: 'Chấm công', icon: CalendarClock },
+  { key: 'positions', path: '/positions', label: 'Chức vụ', icon: BriefcaseBusiness },
+  { key: 'contracts', path: '/contracts', label: 'Hợp đồng', icon: FileText },
+  { key: 'salary', path: '/salary', label: 'Lương', icon: HandCoins },
+  { key: 'sync', path: '/sync', label: 'Đồng bộ', icon: ArrowRightLeft },
 ];
 
-export default function Sidebar({ session, activePage, setActivePage, handleLogout }) {
+export default function Sidebar({ session, handleLogout }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   if (!session) return null;
 
   const visibleMenuItems = session.profile.mode === 'publisher'
     ? menuItems.filter((item) => !['node', 'attendance'].includes(item.key))
     : menuItems.filter((item) => item.key !== 'publisher');
 
-  return (
-    <aside className="border-b border-white/50 bg-[#241d19] px-5 py-6 text-white xl:min-h-screen xl:border-b-0 xl:border-r xl:border-white/10">
+  const sidebarContent = (
+    <>
       <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
         <p className="text-xs uppercase tracking-[0.38em] text-[#d8b39e]">DDB HRM</p>
         <h1 className="mt-3 text-2xl font-semibold">{session.profile.label}</h1>
@@ -35,22 +46,22 @@ export default function Sidebar({ session, activePage, setActivePage, handleLogo
       <div className="mt-8 space-y-2">
         {visibleMenuItems.map((item) => {
           const Icon = item.icon;
-          const active = item.key === activePage;
           return (
-            <button
+            <NavLink
               key={item.key}
-              type="button"
-              onClick={() => setActivePage(item.key)}
-              className={`flex w-full items-center justify-between rounded-[22px] px-4 py-4 text-left transition ${
-                active ? 'bg-[#d8b39e] text-[#241d19]' : 'bg-white/5 text-[#f1e6dd] hover:bg-white/10'
-              }`}
+              to={item.path}
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                `flex w-full items-center justify-between rounded-[22px] px-4 py-4 text-left transition ${
+                  isActive ? 'bg-[#d8b39e] text-[#241d19]' : 'bg-white/5 text-[#f1e6dd] hover:bg-white/10'
+                }`
+              }
             >
               <span className="flex items-center gap-3 font-medium">
                 <Icon className="h-5 w-5" />
                 {item.label}
               </span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            </NavLink>
           );
         })}
       </div>
@@ -64,6 +75,42 @@ export default function Sidebar({ session, activePage, setActivePage, handleLogo
           Đăng xuất
         </Button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile hamburger toggle */}
+      <button
+        type="button"
+        className="fixed left-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#241d19] text-white shadow-lg xl:hidden"
+        onClick={() => setMobileOpen((prev) => !prev)}
+        aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'}
+      >
+        {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 xl:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar drawer */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-[300px] transform overflow-y-auto bg-[#241d19] px-5 py-6 text-white transition-transform duration-300 xl:hidden ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden border-b border-white/50 bg-[#241d19] px-5 py-6 text-white xl:block xl:min-h-screen xl:border-b-0 xl:border-r xl:border-white/10">
+        {sidebarContent}
+      </aside>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { API_PROFILES, clearSession, createNodeApi, createPublisherApi, fetchHealth, loadSession, login, saveSession } from './lib/api';
 import LoginScreen from './pages/Login';
 import Overview from './pages/Overview';
@@ -6,13 +7,18 @@ import Publisher from './pages/Publisher';
 import NodePage from './pages/Node';
 import Attendance from './pages/Attendance';
 import Sync from './pages/Sync';
+import Employees from './pages/Employees';
+import Positions from './pages/Positions';
+import Contracts from './pages/Contracts';
+import Salary from './pages/Salary';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import DashboardStats from './components/layout/DashboardStats';
 
 export default function App() {
+  const location = useLocation();
   const [session, setSession] = useState(loadSession);
-  const [ui, setUi] = useState({ page: 'overview', load: false, submit: '', err: '', msg: '', search: '' });
+  const [ui, setUi] = useState({ load: false, submit: '', err: '', msg: '', search: '' });
   const [pub, setPub] = useState({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [] });
   const [node, setNode] = useState({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null });
   const [leaves, setLeaves] = useState([]);
@@ -60,7 +66,7 @@ export default function App() {
       const { token, user } = await login(profileKey, { username, password });
       const s = { profileKey, profile: API_PROFILES[profileKey], token, user };
       saveSession(s); setSession(s);
-      setUi(p => ({ ...p, page: 'overview', msg: `Đăng nhập thành công ${API_PROFILES[profileKey].label}` }));
+      setUi(p => ({ ...p, msg: `Đăng nhập thành công ${API_PROFILES[profileKey].label}` }));
     } catch (e) { setUi(p => ({ ...p, err: e.message })); }
     finally { setUi(p => ({ ...p, load: false })); }
   };
@@ -70,7 +76,7 @@ export default function App() {
     setPub({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [] });
     setNode({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null });
     setLeaves([]); setLocalEmps([]); setSyncStatus(null);
-    setUi(p => ({ ...p, page: 'overview', err: '', msg }));
+    setUi(p => ({ ...p, err: '', msg }));
   };
 
   const runAction = async (key, action, onOk) => {
@@ -123,26 +129,75 @@ export default function App() {
   const apiProps = { publisherApi: isPub ? createPublisherApi(session.profileKey, session.token) : null, nodeApi: isNode ? createNodeApi(session.profileKey, session.token) : null };
   const sharedProps = { isPublisher: isPub, isNode, session, runAction, submittingKey: ui.submit, publisherData: pub, nodeData: node };
 
-  const pages = {
-    overview: <Overview {...sharedProps} filteredCompanyEmployees={filteredEmps} branchChartData={branchChart} payrollChartData={payrollChart} />,
-    ...(isPub ? { publisher: <Publisher {...sharedProps} {...apiProps} /> } : {}),
-    node: <NodePage {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={localEmps} />,
-    attendance: <Attendance {...sharedProps} {...apiProps} leaves={leaves} localEmployees={localEmps} payrollChartData={payrollChart} />,
-    sync: <Sync {...sharedProps} {...apiProps} setNodeData={setNode} syncStatus={syncStatus} />
+  const pageMeta = {
+    '/': 'Tổng quan',
+    '/publisher': 'Publisher',
+    '/employees': 'Nghiệp vụ chi nhánh',
+    '/node': 'Nghiệp vụ node',
+    '/attendance': 'Chấm công',
+    '/positions': 'Chức vụ',
+    '/contracts': 'Hợp đồng',
+    '/salary': 'Lương',
+    '/sync': 'Đồng bộ',
   };
-
-  const activePage = pages[ui.page] ? ui.page : 'overview';
+  const breadcrumb = pageMeta[location.pathname] || 'Tổng quan';
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(181,82,51,0.16),_transparent_25%),radial-gradient(circle_at_bottom_right,_rgba(127,138,99,0.18),_transparent_30%),linear-gradient(180deg,#f8f1e8_0%,#efdfcd_100%)] text-[var(--hr-ink)]">
       <div className="mx-auto grid min-h-screen max-w-[1600px] xl:grid-cols-[300px_minmax(0,1fr)]">
-        <Sidebar session={session} activePage={activePage} setActivePage={page => setUi(p => ({ ...p, page }))} handleLogout={() => handleLogout()} />
+        <Sidebar session={session} handleLogout={() => handleLogout()} />
         <div className="px-4 py-4 sm:px-6 lg:px-8">
-          <Header search={ui.search} setSearch={search => setUi(p => ({ ...p, search }))} refreshing={ui.load} refreshAll={() => refreshAll()} />
+          <Header
+            breadcrumb={breadcrumb}
+            search={ui.search}
+            setSearch={search => setUi(p => ({ ...p, search }))}
+            refreshing={ui.load}
+            refreshAll={() => refreshAll()}
+          />
           {ui.msg && <div className="mb-4 rounded-2xl bg-[#dce7d4] px-4 py-3 text-sm text-[#4d5d39]">{ui.msg}</div>}
           {ui.err && <div className="mb-4 rounded-2xl bg-[#f3d9d2] px-4 py-3 text-sm text-[#8a3828]">{ui.err}</div>}
           <DashboardStats totalEmployees={isPub ? filteredEmps.length : (node.report.employees || []).length} totalAttendance={totalAtt} totalPayroll={totalPay} isPublisher={isPub} />
-          <main className="mt-6 space-y-6">{pages[activePage]}</main>
+          <main className="mt-6 space-y-6">
+            <Routes>
+              <Route
+                path="/"
+                element={<Overview {...sharedProps} filteredCompanyEmployees={filteredEmps} branchChartData={branchChart} payrollChartData={payrollChart} />}
+              />
+              <Route
+                path="/publisher"
+                element={isPub ? <Publisher {...sharedProps} {...apiProps} /> : <Navigate to="/" replace />}
+              />
+              <Route
+                path="/employees"
+                element={(
+                  <Employees
+                    employees={emps}
+                    searchKeyword={ui.search}
+                    isNode={isNode}
+                    nodeApi={apiProps.nodeApi}
+                    runAction={runAction}
+                    submittingKey={ui.submit}
+                  />
+                )}
+              />
+              <Route
+                path="/node"
+                element={<NodePage {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={localEmps} />}
+              />
+              <Route
+                path="/attendance"
+                element={isNode ? <Attendance {...sharedProps} {...apiProps} leaves={leaves} localEmployees={localEmps} payrollChartData={payrollChart} /> : <Navigate to="/" replace />}
+              />
+              <Route path="/positions" element={<Positions />} />
+              <Route path="/contracts" element={<Contracts />} />
+              <Route path="/salary" element={<Salary />} />
+              <Route
+                path="/sync"
+                element={<Sync {...sharedProps} {...apiProps} setNodeData={setNode} syncStatus={syncStatus} />}
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
         </div>
       </div>
     </div>

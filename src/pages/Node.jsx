@@ -93,21 +93,21 @@ export default function Node({
   return (
     <>
       <SectionHeader
-        eyebrow="Chi nhanh"
-        title="Nhan vien, hop dong, bao cao local"
-        description="Module nay tap trung vao cac endpoint node cho HR manager va node admin."
+        eyebrow="Chi nhánh"
+        title="Nhân viên, hợp đồng, báo cáo local"
+        description="Module này tập trung vào các endpoint node cho HR manager và node admin."
       />
 
       {!isNode ? (
-        <Panel title="Khong dung profile node" subtitle="Trang nay can dang nhap profile chi nhanh HCM hoac Ha Noi.">
+        <Panel title="Không dùng profile node" subtitle="Trang này cần đăng nhập profile chi nhánh HCM hoặc Hà Nội.">
           <p className="text-sm text-[var(--hr-muted)]">
-            Chuyen qua moi truong chi nhanh de tao nhan vien, hop dong va xem bao cao local.
+            Chuyển qua môi trường chi nhánh để tạo nhân viên, hợp đồng và xem báo cáo local.
           </p>
         </Panel>
       ) : (
         <>
           <div className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Tao nhan vien" subtitle="POST `/node/employees`">
+            <Panel title="Tạo nhân viên" subtitle="POST `/node/employees`">
               {employeeFormError && (
                 <div className="mb-2 rounded-xl bg-[#f3d9d2] px-3 py-2 text-sm text-[#8a3828]">
                   {employeeFormError}
@@ -211,7 +211,7 @@ export default function Node({
               </form>
             </Panel>
 
-            <Panel title="Tao hop dong" subtitle="POST `/node/contracts`">
+            <Panel title="Tạo hợp đồng" subtitle="POST `/node/contracts`">
               {contractFormError && (
                 <div className="mb-2 rounded-xl bg-[#f3d9d2] px-3 py-2 text-sm text-[#8a3828]">
                   {contractFormError}
@@ -284,7 +284,7 @@ export default function Node({
           </div>
 
           <Panel
-            title="Bo loc bao cao local"
+            title="Bộ lọc báo cáo local"
             subtitle="GET `/node/reports/local`"
             action={
               <Button
@@ -297,7 +297,7 @@ export default function Node({
                 }
               >
                 <RefreshCw className="h-4 w-4" />
-                Nap bao cao
+                Nạp báo cáo
               </Button>
             }
           >
@@ -326,7 +326,7 @@ export default function Node({
           </Panel>
 
           <div className="grid gap-6 xl:grid-cols-3">
-            <Panel title="Nhan vien local">
+            <Panel title="Nhân viên local">
               <DataTable
                 columns={[
                   { key: 'MaNhanVien', label: 'Ma NV' },
@@ -351,7 +351,7 @@ export default function Node({
                 rows={localEmployees}
               />
             </Panel>
-            <Panel title="Tong hop cham cong">
+            <Panel title="Tổng hợp chấm công">
               <DataTable
                 columns={[
                   { key: 'MaNhanVien', label: 'Ma' },
@@ -360,7 +360,7 @@ export default function Node({
                 rows={nodeData.report.attendance || []}
               />
             </Panel>
-            <Panel title="Tong hop luong">
+            <Panel title="Tổng hợp lương">
               <DataTable
                 columns={[
                   { key: 'MaNhanVien', label: 'Ma' },
