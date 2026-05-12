@@ -136,6 +136,7 @@ export function createPublisherApi(profileKey, token) {
     createContractType: (body) =>
       request(profileKey, '/publisher/contract-types', { method: 'POST', token, body }),
     createAccount: (body) => request(profileKey, '/publisher/accounts', { method: 'POST', token, body }),
+    createEmployee: (body) => request(profileKey, '/node/employees', { method: 'POST', token, body }),
   };
 }
 

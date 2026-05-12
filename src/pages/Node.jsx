@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { UserPlus, FileText, RefreshCw } from 'lucide-react';
 import SectionHeader from '../components/ui/SectionHeader';
 import Panel from '../components/ui/Panel';
@@ -8,19 +8,8 @@ import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import { getInitials, formatCurrency } from '../utils/format';
-
-const defaultEmployeeForm = {
-  maNhanVien: '',
-  hoTen: '',
-  ngaySinh: '',
-  gioiTinh: 'Nam',
-  sdt: '',
-  email: '',
-  maPhongBan: '',
-  maChucVu: '',
-  ngayVaoLam: '',
-  maChiNhanh: '',
-};
+import EmployeeAddModal from './employees/EmployeeAddModal';
+import { SEED_DEPARTMENTS, SEED_POSITIONS } from '../data/employees';
 
 const defaultContractForm = {
   maHopDong: '',
@@ -52,33 +41,27 @@ export default function Node({
   submittingKey,
   session,
 }) {
-  const [employeeForm, setEmployeeForm] = useState(defaultEmployeeForm);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [contractForm, setContractForm] = useState(defaultContractForm);
   const [reportFilters, setReportFilters] = useState(defaultReportFilters);
-  const [employeeFormError, setEmployeeFormError] = useState('');
   const [contractFormError, setContractFormError] = useState('');
   const branchCode = NODE_BRANCH_CODES[session?.profileKey] || '';
 
-  useEffect(() => {
-    if (!branchCode) return;
-    setEmployeeForm((previous) =>
-      previous.maChiNhanh === branchCode ? previous : { ...previous, maChiNhanh: branchCode },
-    );
-  }, [branchCode]);
+  const availableDepts = useMemo(() => {
+    const map = new Map();
+    localEmployees.forEach(emp => {
+      if (emp.MaPhongBan) map.set(emp.MaPhongBan, emp.TenPhongBan || emp.MaPhongBan);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [localEmployees]);
 
-  function validateEmployeeForm(form) {
-    if (!form.maNhanVien?.trim()) return 'Mã nhân viên không được để trống.';
-    if (form.maNhanVien.trim().length > 10) return 'Mã nhân viên tối đa 10 ký tự.';
-    if (!form.hoTen?.trim()) return 'Họ tên không được để trống.';
-    if (!form.maPhongBan?.trim()) return 'Mã phòng ban không được để trống.';
-    if (form.maPhongBan.trim().length > 10) return 'Mã phòng ban tối đa 10 ký tự.';
-    if (/\s/.test(form.maPhongBan.trim())) return 'Mã phòng ban không được chứa khoảng trắng.';
-    if (!form.maChucVu?.trim()) return 'Mã chức vụ không được để trống.';
-    if (form.maChucVu.trim().length > 10) return 'Mã chức vụ tối đa 10 ký tự.';
-    if (/\s/.test(form.maChucVu.trim())) return 'Mã chức vụ không được chứa khoảng trắng.';
-    if (!form.maChiNhanh?.trim()) return 'Mã chi nhánh không xác định. Vui lòng đăng nhập lại.';
-    return '';
-  }
+  const availablePositions = useMemo(() => {
+    const map = new Map();
+    localEmployees.forEach(emp => {
+      if (emp.MaChucVu) map.set(emp.MaChucVu, emp.TenChucVu || emp.MaChucVu);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [localEmployees]);
 
   function validateContractForm(form) {
     if (!form.maHopDong?.trim()) return 'Mã hợp đồng không được để trống.';
@@ -107,108 +90,25 @@ export default function Node({
       ) : (
         <>
           <div className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Tạo nhân viên" subtitle="POST `/node/employees`">
-              {employeeFormError && (
-                <div className="mb-2 rounded-xl bg-[#f3d9d2] px-3 py-2 text-sm text-[#8a3828]">
-                  {employeeFormError}
+            <Panel title="Quản lý nhân viên" subtitle="Thao tác với hồ sơ nhân sự local.">
+              <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#ecd7cb] text-[#8a3828]">
+                  <UserPlus className="h-8 w-8" />
                 </div>
-              )}
-              <form
-                className="grid gap-4 md:grid-cols-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const formWithBranch = { ...employeeForm, maChiNhanh: branchCode || employeeForm.maChiNhanh };
-                  const err = validateEmployeeForm(formWithBranch);
-                  if (err) { setEmployeeFormError(err); return; }
-                  setEmployeeFormError('');
-                  runAction('create-employee', () => nodeApi.createEmployee(formWithBranch), () =>
-                    setEmployeeForm({ ...defaultEmployeeForm, maChiNhanh: branchCode }),
-                  );
-                }}
-              >
-                <Field label="Ma nhan vien">
-                  <Input
-                    value={employeeForm.maNhanVien}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, maNhanVien: event.target.value })}
-                    required
-                  />
-                </Field>
-                <Field label="Ho ten">
-                  <Input
-                    value={employeeForm.hoTen}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, hoTen: event.target.value })}
-                    required
-                  />
-                </Field>
-                <Field label="Ngay sinh">
-                  <Input
-                    type="date"
-                    value={employeeForm.ngaySinh}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, ngaySinh: event.target.value })}
-                  />
-                </Field>
-                <Field label="Gioi tinh">
-                  <Select
-                    value={employeeForm.gioiTinh}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, gioiTinh: event.target.value })}
-                  >
-                    <option value="Nam">Nam</option>
-                    <option value="Nu">Nu</option>
-                    <option value="Khac">Khac</option>
-                  </Select>
-                </Field>
-                <Field label="SDT">
-                  <Input
-                    value={employeeForm.sdt}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, sdt: event.target.value })}
-                  />
-                </Field>
-                <Field label="Email">
-                  <Input
-                    type="email"
-                    value={employeeForm.email}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, email: event.target.value })}
-                  />
-                </Field>
-                <Field label="Ma phong ban">
-                  <Input
-                    value={employeeForm.maPhongBan}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, maPhongBan: event.target.value })}
-                    required
-                  />
-                </Field>
-                <Field label="Ma chuc vu">
-                  <Input
-                    value={employeeForm.maChucVu}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, maChucVu: event.target.value })}
-                    required
-                  />
-                </Field>
-                <Field label="Ngay vao lam">
-                  <Input
-                    type="date"
-                    value={employeeForm.ngayVaoLam}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, ngayVaoLam: event.target.value })}
-                  />
-                </Field>
-                <Field label="Ma chi nhanh">
-                  <Input
-                    value={employeeForm.maChiNhanh}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, maChiNhanh: event.target.value })}
-                    readOnly={Boolean(branchCode)}
-                    required
-                  />
-                </Field>
+                <h4 className="text-lg font-semibold text-[var(--hr-ink)]">Thêm nhân viên mới</h4>
+                <p className="mt-2 mb-6 max-w-xs text-sm text-[var(--hr-muted)]">
+                  Khởi tạo hồ sơ nhân sự mới cho chi nhánh {branchCode}. Dữ liệu sẽ được lưu tại Node local trước khi đồng bộ.
+                </p>
                 <Button
-                  type="submit"
                   variant="accent"
-                  loading={submittingKey === 'create-employee'}
-                  className="md:col-span-2"
+                  size="lg"
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="w-full sm:w-auto"
                 >
                   <UserPlus className="h-4 w-4" />
-                  Tao nhan vien
+                  Mở form thêm nhân viên
                 </Button>
-              </form>
+              </div>
             </Panel>
 
             <Panel title="Tạo hợp đồng" subtitle="POST `/node/contracts`">
@@ -346,6 +246,7 @@ export default function Node({
                     ),
                   },
                   { key: 'TenPhongBan', label: 'Phong ban' },
+                  { key: 'TenChucVu', label: 'Chuc vu' },
                   { key: 'Email', label: 'Email' },
                 ]}
                 rows={localEmployees}
@@ -376,6 +277,38 @@ export default function Node({
           </div>
         </>
       )}
+
+      <EmployeeAddModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={(formData) => {
+          runAction('create-employee', () => nodeApi.createEmployee(formData), () => {
+            const dept = SEED_DEPARTMENTS.find(d => d.MaPhongBan === formData.maPhongBan);
+            const pos = SEED_POSITIONS.find(p => p.MaChucVu === formData.maChucVu);
+            if (saveEmpMeta) {
+              saveEmpMeta(formData.maNhanVien, {
+                sdt: formData.sdt,
+                email: formData.email,
+                ngaySinh: formData.ngaySinh,
+                ngayVaoLam: formData.ngayVaoLam,
+                maChiNhanh: formData.maChiNhanh,
+                tenChiNhanh: formData.maChiNhanh === 'CNHCM' ? 'Chi nhánh HCM' : 'Chi nhánh Hà Nội',
+                tenPhongBan: dept?.TenPhongBan || formData.maPhongBan,
+                tenChucVu: pos?.TenChucVu || formData.maChucVu,
+                maPhongBan: formData.maPhongBan,
+                maChucVu: formData.maChucVu,
+              });
+            }
+            setIsAddModalOpen(false);
+          });
+        }}
+        submittingKey={submittingKey}
+        isNode={true}
+        initialMaChiNhanh={branchCode}
+        existingIds={localEmployees.map(r => r.MaNhanVien)}
+        departments={availableDepts}
+        positions={availablePositions}
+      />
     </>
   );
 }

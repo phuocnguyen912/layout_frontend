@@ -8,12 +8,27 @@ import EmployeeTable from './employees/EmployeeTable';
 import EmployeeDetailModal from './employees/EmployeeDetailModal';
 import EmployeeEditModal from './employees/EmployeeEditModal';
 import EmployeeDeleteConfirmModal from './employees/EmployeeDeleteConfirmModal';
+import EmployeeAddModal from './employees/EmployeeAddModal';
 import { buildEditForm, resolveEmployeeKey, resolveEmployeeStatus } from './employees/employeeUtils';
+import Button from '../components/ui/Button';
+import { UserPlus } from 'lucide-react';
+import { SEED_DEPARTMENTS, SEED_POSITIONS } from '../data/employees';
 
 const PAGE_SIZE = 10;
 
-export default function Employees({ employees, searchKeyword, isNode, nodeApi, runAction, submittingKey }) {
+export default function Employees({
+  employees,
+  searchKeyword,
+  isNode,
+  nodeApi,
+  publisherApi,
+  publisherData,
+  session,
+  runAction,
+  submittingKey,
+}) {
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [viewEmployee, setViewEmployee] = useState(null);
   const [editEmployee, setEditEmployee] = useState(null);
   const [deleteEmployeeTarget, setDeleteEmployeeTarget] = useState(null);
@@ -33,6 +48,25 @@ export default function Employees({ employees, searchKeyword, isNode, nodeApi, r
     resolveStatus: resolveEmployeeStatus,
     pageSize: PAGE_SIZE,
   });
+
+  const availableDepts = useMemo(() => {
+    const map = new Map();
+    employees.forEach(emp => {
+      if (emp.MaPhongBan) map.set(emp.MaPhongBan, emp.TenPhongBan || emp.MaPhongBan);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [employees]);
+
+  const availablePositions = useMemo(() => {
+    const map = new Map();
+    if (publisherData?.positions) {
+      publisherData.positions.forEach(p => map.set(p.MaChucVu, p.TenChucVu));
+    }
+    employees.forEach(emp => {
+      if (emp.MaChucVu) map.set(emp.MaChucVu, emp.TenChucVu || emp.MaChucVu);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [employees, publisherData]);
 
   useEffect(() => {
     if (!toast.message) return;
@@ -79,6 +113,22 @@ export default function Employees({ employees, searchKeyword, isNode, nodeApi, r
           maChucVu: editForm.MaChucVu.trim(),
         }),
       () => {
+        const dept = SEED_DEPARTMENTS.find(d => d.MaPhongBan === editForm.MaPhongBan);
+        const pos = SEED_POSITIONS.find(p => p.MaChucVu === editForm.MaChucVu);
+        if (saveEmpMeta) {
+          saveEmpMeta(editForm.MaNhanVien, {
+            sdt: editForm.SDT,
+            email: editForm.Email,
+            ngaySinh: editForm.NgaySinh,
+            ngayVaoLam: editForm.NgayVaoLam,
+            maChiNhanh: editForm.MaChiNhanh || editEmployee.MaChiNhanh,
+            tenChiNhanh: (editForm.MaChiNhanh || editEmployee.MaChiNhanh) === 'CNHCM' ? 'Chi nhánh HCM' : 'Chi nhánh Hà Nội',
+            tenPhongBan: dept?.TenPhongBan || editForm.MaPhongBan,
+            tenChucVu: pos?.TenChucVu || editForm.MaChucVu,
+            maPhongBan: editForm.MaPhongBan,
+            maChucVu: editForm.MaChucVu,
+          });
+        }
         setEditEmployee(null);
         setEditError('');
         setToast({ type: 'success', message: 'Cập nhật nhân viên thành công.' });
@@ -98,6 +148,38 @@ export default function Employees({ employees, searchKeyword, isNode, nodeApi, r
     );
   };
 
+  const handleCreateEmployee = (formData) => {
+    const api = isNode ? nodeApi : publisherApi;
+    if (!api) return;
+
+    runAction(
+      'create-employee',
+      () => api.createEmployee(formData),
+      () => {
+        const dept = SEED_DEPARTMENTS.find(d => d.MaPhongBan === formData.maPhongBan);
+        const pos = SEED_POSITIONS.find(p => p.MaChucVu === formData.maChucVu);
+        if (saveEmpMeta) {
+          saveEmpMeta(formData.maNhanVien, {
+            sdt: formData.sdt,
+            email: formData.email,
+            ngaySinh: formData.ngaySinh,
+            ngayVaoLam: formData.ngayVaoLam,
+            maChiNhanh: formData.maChiNhanh,
+            tenChiNhanh: formData.maChiNhanh === 'CNHCM' ? 'Chi nhánh HCM' : 'Chi nhánh Hà Nội',
+            tenPhongBan: dept?.TenPhongBan || formData.maPhongBan,
+            tenChucVu: pos?.TenChucVu || formData.maChucVu,
+            maPhongBan: formData.maPhongBan,
+            maChucVu: formData.maChucVu,
+          });
+        }
+        setIsAddModalOpen(false);
+        setToast({ type: 'success', message: 'Thêm nhân viên thành công.' });
+      },
+    );
+  };
+
+  const branchCode = session?.profileKey === 'node_hcm' ? 'CNHCM' : session?.profileKey === 'node_hn' ? 'CNHN' : '';
+
   return (
     <>
       <SectionHeader
@@ -111,14 +193,20 @@ export default function Employees({ employees, searchKeyword, isNode, nodeApi, r
         title="Danh sách nhân sự"
         subtitle={`Tổng ${filteredRows.length} nhân viên sau khi lọc.`}
         action={(
-          <div className="min-w-[220px]">
-            <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status === 'all' ? 'Tất cả trạng thái' : status}
-                </option>
-              ))}
-            </Select>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="accent" onClick={() => setIsAddModalOpen(true)}>
+              <UserPlus className="h-4 w-4" />
+              Thêm nhân viên
+            </Button>
+            <div className="min-w-[200px]">
+              <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status === 'all' ? 'Tất cả trạng thái' : status}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
         )}
       >
@@ -171,6 +259,19 @@ export default function Employees({ employees, searchKeyword, isNode, nodeApi, r
         submittingKey={submittingKey}
         onCancel={() => setDeleteEmployeeTarget(null)}
         onConfirm={handleDeleteEmployee}
+      />
+
+      <EmployeeAddModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleCreateEmployee}
+        submittingKey={submittingKey}
+        isNode={isNode}
+        initialMaChiNhanh={branchCode}
+        branches={publisherData?.branches || []}
+        existingIds={employees.map(r => r.MaNhanVien)}
+        departments={availableDepts}
+        positions={availablePositions}
       />
     </>
   );

@@ -14,6 +14,7 @@ import Salary from './pages/Salary';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import DashboardStats from './components/layout/DashboardStats';
+import { SEED_EMPLOYEES } from './data/employees';
 
 export default function App() {
   const location = useLocation();
@@ -24,6 +25,16 @@ export default function App() {
   const [leaves, setLeaves] = useState([]);
   const [localEmps, setLocalEmps] = useState([]);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [empMeta, setEmpMeta] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ddb-emp-meta');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ddb-emp-meta', JSON.stringify(empMeta));
+  }, [empMeta]);
 
   useEffect(() => {
     if (!ui.msg) return;
@@ -119,7 +130,41 @@ export default function App() {
   const isPub = session.profile.mode === 'publisher', isNode = !isPub;
   const kw = ui.search.trim().toLowerCase();
   const emps = isPub ? pub.employees : (node.report.employees || []);
-  const filteredEmps = kw ? emps.filter(i => JSON.stringify(i).toLowerCase().includes(kw)) : emps;
+  const saveEmpMeta = (id, data) => setEmpMeta(p => ({ ...p, [id]: data }));
+
+  const hydrate = (list) => (list || []).map(item => {
+    const itemId = String(item.MaNhanVien || '').toUpperCase();
+    
+    // Nguon 1: Tu bo nho dem (Local Metadata)
+    const metaKey = Object.keys(empMeta).find(k => k.toUpperCase() === itemId);
+    const meta = metaKey ? empMeta[metaKey] : null;
+
+    // Nguon 2: Tu du lieu Publisher (neu co)
+    const pubEmp = (pub.employees || []).find(e => String(e.MaNhanVien || '').toUpperCase() === itemId);
+
+    // Nguon 3: Tu SEED data
+    const seedEmp = (SEED_EMPLOYEES || []).find(e => String(e.MaNhanVien || '').toUpperCase() === itemId);
+
+    const source = { ...seedEmp, ...pubEmp, ...meta };
+
+    return {
+      ...item,
+      SDT: item.SDT || source.SDT || source.sdt,
+      Email: item.Email || source.Email || source.email,
+      NgaySinh: item.NgaySinh || source.NgaySinh || source.ngaySinh,
+      NgayVaoLam: item.NgayVaoLam || source.NgayVaoLam || source.ngayVaoLam,
+      MaChiNhanh: item.MaChiNhanh || source.MaChiNhanh || source.maChiNhanh,
+      TenChiNhanh: item.TenChiNhanh || source.TenChiNhanh || source.tenChiNhanh,
+      TenPhongBan: item.TenPhongBan || source.TenPhongBan || source.tenPhongBan,
+      TenChucVu: item.TenChucVu || source.TenChucVu || source.tenChucVu,
+      MaPhongBan: item.MaPhongBan || source.MaPhongBan || source.maPhongBan,
+      MaChucVu: item.MaChucVu || source.MaChucVu || source.maChucVu,
+      TrangThai: item.TrangThai || source.TrangThai || source.trangThai || 'Hoat dong',
+    };
+  });
+
+  const hydratedEmps = hydrate(emps);
+  const filteredEmps = kw ? hydratedEmps.filter(i => JSON.stringify(i).toLowerCase().includes(kw)) : hydratedEmps;
   const branchChart = (pub.summary?.employeeByBranch || []).map(i => ({ name: i.TenChiNhanh || i.MaChiNhanh, employees: Number(i.SoNhanVien || 0) }));
   const payrollChart = (node.report.payroll || []).map(i => ({ name: i.MaNhanVien, salary: Number(i.TongLuong || 0) }));
   const attList = isPub ? pub.sync : (node.report.attendance || []);
@@ -127,7 +172,7 @@ export default function App() {
   const totalPay = isPub ? (pub.summary?.salaryStats?.TongLuong || 0) : payrollChart.reduce((s, r) => s + r.salary, 0);
 
   const apiProps = { publisherApi: isPub ? createPublisherApi(session.profileKey, session.token) : null, nodeApi: isNode ? createNodeApi(session.profileKey, session.token) : null };
-  const sharedProps = { isPublisher: isPub, isNode, session, runAction, submittingKey: ui.submit, publisherData: pub, nodeData: node };
+  const sharedProps = { isPublisher: isPub, isNode, session, runAction, submittingKey: ui.submit, publisherData: pub, nodeData: node, saveEmpMeta };
 
   const pageMeta = {
     '/': 'Tổng quan',
@@ -171,22 +216,26 @@ export default function App() {
                 path="/employees"
                 element={(
                   <Employees
-                    employees={emps}
-                    searchKeyword={ui.search}
+                    employees={filteredEmps}
+                    searchKeyword={kw}
                     isNode={isNode}
                     nodeApi={apiProps.nodeApi}
+                    publisherApi={apiProps.publisherApi}
+                    publisherData={pub}
+                    session={session}
                     runAction={runAction}
                     submittingKey={ui.submit}
+                    saveEmpMeta={saveEmpMeta}
                   />
                 )}
               />
               <Route
                 path="/node"
-                element={<NodePage {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={localEmps} />}
+                element={<NodePage {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={hydrate(localEmps)} />}
               />
               <Route
                 path="/attendance"
-                element={isNode ? <Attendance {...sharedProps} {...apiProps} leaves={leaves} localEmployees={localEmps} payrollChartData={payrollChart} /> : <Navigate to="/" replace />}
+                element={isNode ? <Attendance {...sharedProps} {...apiProps} leaves={leaves} localEmployees={hydrate(localEmps)} payrollChartData={payrollChart} /> : <Navigate to="/" replace />}
               />
               <Route path="/positions" element={<Positions />} />
               <Route path="/contracts" element={<Contracts />} />

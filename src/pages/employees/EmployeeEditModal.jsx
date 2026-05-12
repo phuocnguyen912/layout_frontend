@@ -2,7 +2,7 @@ import Field from '../../components/ui/Field';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
-import { SEED_POSITIONS } from '../../data/employees';
+import { SEED_POSITIONS, SEED_DEPARTMENTS } from '../../data/employees';
 
 export default function EmployeeEditModal({
   employee,
@@ -49,8 +49,18 @@ export default function EmployeeEditModal({
           <Field label="Ngày vào làm">
             <Input type="date" value={editForm.NgayVaoLam} onChange={(event) => onChange({ NgayVaoLam: event.target.value })} />
           </Field>
-          <Field label="Mã phòng ban">
-            <Input value={editForm.MaPhongBan} onChange={(event) => onChange({ MaPhongBan: event.target.value })} />
+          <Field label="Phòng ban">
+            <Select
+              value={editForm.MaPhongBan}
+              onChange={(event) => onChange({ MaPhongBan: event.target.value })}
+            >
+              <option value="">-- Chọn phòng ban --</option>
+              {SEED_DEPARTMENTS.filter(d => !employee.MaChiNhanh || d.MaChiNhanh === employee.MaChiNhanh).map((dept) => (
+                <option key={dept.MaPhongBan} value={dept.MaPhongBan}>
+                  {dept.TenPhongBan} ({dept.MaPhongBan})
+                </option>
+              ))}
+            </Select>
           </Field>
           <Field label="Chức vụ">
             <Select value={editForm.MaChucVu} onChange={(event) => onChange({ MaChucVu: event.target.value })}>

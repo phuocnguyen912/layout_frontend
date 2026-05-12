@@ -17,8 +17,9 @@ import Button from '../ui/Button';
 
 const menuItems = [
   { key: 'overview', path: '/', label: 'Tổng quan', icon: LayoutDashboard },
-  { key: 'publisher', path: '/publisher', label: 'Publisher', icon: Building2 },
-  { key: 'node', path: '/employees', label: 'Nghiệp vụ chi nhánh', icon: Users },
+  { key: 'publisher', path: '/publisher', label: 'Quản trị Publisher', icon: Building2 },
+  { key: 'employees', path: '/employees', label: 'Danh sách nhân viên', icon: Users },
+  { key: 'node', path: '/node', label: 'Nghiệp vụ local', icon: BriefcaseBusiness },
   { key: 'attendance', path: '/attendance', label: 'Chấm công', icon: CalendarClock },
   { key: 'positions', path: '/positions', label: 'Chức vụ', icon: BriefcaseBusiness },
   { key: 'contracts', path: '/contracts', label: 'Hợp đồng', icon: FileText },

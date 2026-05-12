@@ -25,7 +25,9 @@ export default function EmployeeTable({
               </div>
               <div>
                 <p className="font-semibold text-[var(--hr-ink)]">{row.HoTen || 'N/A'}</p>
-                <p className="text-xs text-[var(--hr-muted)]">{row.MaNhanVien || 'N/A'}</p>
+                <p className="text-xs text-[var(--hr-muted)]">
+                  {row.MaNhanVien} {row.TenChucVu ? `• ${row.TenChucVu}` : ''}
+                </p>
               </div>
             </div>
           ),
