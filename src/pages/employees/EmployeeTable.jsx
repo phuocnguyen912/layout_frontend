@@ -1,8 +1,25 @@
 import DataTable from '../../components/ui/DataTable';
 import StatusPill from '../../components/ui/StatusPill';
-import Button from '../../components/ui/Button';
 import { getInitials } from '../../utils/format';
 import { resolveEmployeeStatus } from './employeeUtils';
+import { Eye, Pencil, UserX, UserCheck } from 'lucide-react';
+
+function IconBtn({ icon: Icon, title, onClick, colorClass, loading = false }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      disabled={loading}
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border transition
+        disabled:cursor-not-allowed disabled:opacity-50 ${colorClass}`}
+    >
+      {loading
+        ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        : <Icon className="h-4 w-4" />}
+    </button>
+  );
+}
 
 export default function EmployeeTable({
   rows,
@@ -11,6 +28,7 @@ export default function EmployeeTable({
   onView,
   onEdit,
   onDelete,
+  onReactivate,
 }) {
   return (
     <DataTable
@@ -20,13 +38,13 @@ export default function EmployeeTable({
           label: 'Nhân viên',
           render: (row) => (
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ecd7cb] font-semibold text-[#8a3828]">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#ecd7cb] text-sm font-semibold text-[#8a3828]">
                 {getInitials(row.HoTen)}
               </div>
               <div>
                 <p className="font-semibold text-[var(--hr-ink)]">{row.HoTen || 'N/A'}</p>
                 <p className="text-xs text-[var(--hr-muted)]">
-                  {row.MaNhanVien} {row.TenChucVu ? `• ${row.TenChucVu}` : ''}
+                  {row.MaNhanVien}{row.TenChucVu ? ` • ${row.TenChucVu}` : ''}
                 </p>
               </div>
             </div>
@@ -46,30 +64,47 @@ export default function EmployeeTable({
         },
         {
           key: 'actions',
-          label: 'Thao tác',
-          render: (row) => (
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="secondary" className="px-3 py-2" onClick={() => onView(row)}>
-                Xem
-              </Button>
-              {isNode ? (
-                <>
-                  <Button type="button" variant="accent" className="px-3 py-2" onClick={() => onEdit(row)}>
-                    Sửa
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="px-3 py-2"
-                    loading={submittingKey === 'delete-employee'}
-                    onClick={() => onDelete(row)}
-                  >
-                    Nghỉ việc
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          ),
+          label: '',
+          render: (row) => {
+            const isResigned = resolveEmployeeStatus(row) === 'Nghỉ việc';
+            return (
+              <div className="flex items-center justify-end gap-1.5">
+                <IconBtn
+                  icon={Eye}
+                  title="Xem chi tiết"
+                  onClick={() => onView(row)}
+                  colorClass="border-[#ddd0c4] bg-white text-[#7a6a60] hover:bg-[#f6ede2] hover:text-[#3f342d]"
+                />
+                {isNode && (
+                  <>
+                    <IconBtn
+                      icon={Pencil}
+                      title="Sửa thông tin"
+                      onClick={() => onEdit(row)}
+                      colorClass="border-[#c47a5a] bg-[#b55233] text-white hover:bg-[#964228]"
+                    />
+                    {isResigned ? (
+                      <IconBtn
+                        icon={UserCheck}
+                        title="Kích hoạt lại"
+                        onClick={() => onReactivate(row)}
+                        loading={submittingKey === 'reactivate-employee'}
+                        colorClass="border-green-400 bg-green-50 text-green-700 hover:bg-green-100"
+                      />
+                    ) : (
+                      <IconBtn
+                        icon={UserX}
+                        title="Cho nghỉ việc"
+                        onClick={() => onDelete(row)}
+                        loading={submittingKey === 'delete-employee'}
+                        colorClass="border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          },
         },
       ]}
       rows={rows}

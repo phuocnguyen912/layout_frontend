@@ -26,6 +26,7 @@ export default function Employees({
   session,
   runAction,
   submittingKey,
+  saveEmpMeta,
 }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -38,6 +39,8 @@ export default function Employees({
 
   const statusOptions = useMemo(() => {
     const statuses = new Set(employees.map((employee) => resolveEmployeeStatus(employee)));
+    // Luôn thêm trạng thái Nghỉ việc để cho phép xem nhân viên đã bị cho nghỉ việc
+    statuses.add('Nghỉ việc');
     return ['all', ...Array.from(statuses)];
   }, [employees]);
 
@@ -148,6 +151,17 @@ export default function Employees({
     );
   };
 
+  const handleReactivateEmployee = (employee) => {
+    if (!isNode || !nodeApi) return;
+    runAction(
+      'reactivate-employee',
+      () => nodeApi.reactivateEmployee(resolveEmployeeKey(employee)),
+      () => {
+        setToast({ type: 'success', message: `Đã kích hoạt lại nhân viên ${employee.HoTen}.` });
+      },
+    );
+  };
+
   const handleCreateEmployee = (formData) => {
     const api = isNode ? nodeApi : publisherApi;
     if (!api) return;
@@ -217,6 +231,7 @@ export default function Employees({
           onView={(employee) => setViewEmployee(employee)}
           onEdit={(employee) => openEditModal(employee)}
           onDelete={(employee) => setDeleteEmployeeTarget(employee)}
+          onReactivate={handleReactivateEmployee}
         />
 
         <div className="mt-4 flex flex-col gap-3 text-sm text-[var(--hr-muted)] sm:flex-row sm:items-center sm:justify-between">
