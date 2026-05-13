@@ -150,6 +150,11 @@ export function createNodeApi(profileKey, token) {
       return request(profileKey, `/node/reports/local${suffix}`, { token });
     },
 
+    listBranches: () => request(profileKey, '/node/branches', { token }),
+    listPositions: () => request(profileKey, '/node/positions', { token }),
+    listContractTypes: () => request(profileKey, '/node/contract-types', { token }),
+    listDepartments: () => request(profileKey, '/node/departments', { token }),
+
     listEmployees: (keyword = '') =>
       request(
         profileKey,

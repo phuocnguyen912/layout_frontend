@@ -13,11 +13,12 @@ import DashboardStats from './components/layout/DashboardStats';
 export default function App() {
   const [session, setSession] = useState(loadSession);
   const [ui, setUi] = useState({ page: 'overview', load: false, submit: '', err: '', msg: '', search: '' });
-  const [pub, setPub] = useState({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [] });
-  const [node, setNode] = useState({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null });
+  const [pub, setPub] = useState({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [], departments: [] });
+  const [node, setNode] = useState({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null, branches: [], positions: [], contractTypes: [], departments: [] });
   const [leaves, setLeaves] = useState([]);
   const [localEmps, setLocalEmps] = useState([]);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [reportFilters, setReportFilters] = useState({ keyword: '', thang: new Date().getMonth() + 1, nam: new Date().getFullYear() });
 
   useEffect(() => {
     if (!ui.msg) return;
@@ -37,13 +38,17 @@ export default function App() {
         setPub({ summary, sync, employees, branches, positions, contractTypes });
       } else {
         const a = createNodeApi(s.profileKey, s.token);
-        const d = new Date();
-        const [report, health] = await Promise.all([
-          a.localReport({ keyword: '', thang: d.getMonth() + 1, nam: d.getFullYear() }),
+        const [report, health, branches, positions, contractTypes, departments, detailedEmps] = await Promise.all([
+          a.localReport(reportFilters),
           fetchHealth(s.profileKey).catch(() => null),
+          a.listBranches().catch(e => { console.error('Lỗi listBranches:', e.message); return []; }),
+          a.listPositions().catch(e => { console.error('Lỗi listPositions:', e.message); return []; }),
+          a.listContractTypes().catch(e => { console.error('Lỗi listContractTypes:', e.message); return []; }),
+          a.listDepartments().catch(e => { console.error('Lỗi listDepartments:', e.message); return []; }),
+          a.listEmployees().catch(e => { console.error('Lỗi listEmployees:', e.message); return []; }),
         ]);
-        setNode(p => ({ ...p, report, health }));
-        setLocalEmps(report?.employees || []);
+        setNode(p => ({ ...p, report, health, branches, positions, contractTypes, departments }));
+        setLocalEmps(detailedEmps.length > 0 ? detailedEmps : (report?.employees || []));
         setSyncStatus(null);
       }
     } catch (e) {
@@ -52,7 +57,7 @@ export default function App() {
     } finally { setUi(p => ({ ...p, load: false })); }
   };
 
-  useEffect(() => { refreshAll(); }, [session]);
+  useEffect(() => { refreshAll(); }, [session, reportFilters]);
 
   const handleLogin = async ({ profileKey, username, password }) => {
     setUi(p => ({ ...p, load: true, err: '' }));
@@ -68,7 +73,7 @@ export default function App() {
   const handleLogout = (msg = '') => {
     clearSession(); setSession(null);
     setPub({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [] });
-    setNode({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null });
+    setNode({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null, branches: [], positions: [], contractTypes: [], departments: [] });
     setLeaves([]); setLocalEmps([]); setSyncStatus(null);
     setUi(p => ({ ...p, page: 'overview', err: '', msg }));
   };
@@ -121,13 +126,13 @@ export default function App() {
   const totalPay = isPub ? (pub.summary?.salaryStats?.TongLuong || 0) : payrollChart.reduce((s, r) => s + r.salary, 0);
 
   const apiProps = { publisherApi: isPub ? createPublisherApi(session.profileKey, session.token) : null, nodeApi: isNode ? createNodeApi(session.profileKey, session.token) : null };
-  const sharedProps = { isPublisher: isPub, isNode, session, runAction, submittingKey: ui.submit, publisherData: pub, nodeData: node };
+  const sharedProps = { isPublisher: isPub, isNode, session, runAction, submittingKey: ui.submit, publisherData: pub, nodeData: node, setNodeData: setNode, reportFilters, setReportFilters };
 
   const pages = {
-    overview: <Overview {...sharedProps} filteredCompanyEmployees={filteredEmps} branchChartData={branchChart} payrollChartData={payrollChart} />,
+    overview: <Overview {...sharedProps} {...apiProps} filteredCompanyEmployees={filteredEmps} branchChartData={branchChart} />,
     ...(isPub ? { publisher: <Publisher {...sharedProps} {...apiProps} /> } : {}),
-    node: <NodePage {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={localEmps} />,
-    attendance: <Attendance {...sharedProps} {...apiProps} leaves={leaves} localEmployees={localEmps} payrollChartData={payrollChart} />,
+    node: <NodePage {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={localEmps} publisherData={pub} reportFilters={reportFilters} setReportFilters={setReportFilters} />,
+    attendance: <Attendance {...sharedProps} {...apiProps} setNodeData={setNode} leaves={leaves} localEmployees={localEmps} payrollChartData={payrollChart} />,
     sync: <Sync {...sharedProps} {...apiProps} setNodeData={setNode} syncStatus={syncStatus} />
   };
 

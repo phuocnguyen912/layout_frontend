@@ -40,7 +40,7 @@ export default function Sync({ isPublisher, isNode, nodeApi, session, publisherD
           )}
         </Panel>
 
-        <Panel title="Tác vụ đồng bộ" subtitle="Chạy đồng bộ khi đang ở môi trường chi nhánh.">
+        <Panel title="Tác vụ đồng bộ">
           <div className="space-y-3">
             {isNode ? (
               <>
