@@ -40,6 +40,7 @@ export default function Node({
   runAction,
   submittingKey,
   session,
+  saveEmpMeta,
 }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [contractForm, setContractForm] = useState(defaultContractForm);

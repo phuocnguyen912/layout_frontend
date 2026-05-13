@@ -109,12 +109,12 @@ export default function EmployeeAddModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1712]/50 p-4">
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[24px] bg-white p-6 shadow-2xl">
-        <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#9a4f35]">Thêm nhân viên</p>
             <h3 className="mt-1 text-xl font-semibold text-[var(--hr-ink)]">Tạo hồ sơ nhân sự mới</h3>
           </div>
-          <button type="button" className="text-sm text-[var(--hr-muted)] hover:text-[var(--hr-ink)]" onClick={onClose}>
+          <button type="button" className="flex-shrink-0 text-sm font-medium text-[var(--hr-muted)] hover:text-[var(--hr-ink)] transition" onClick={onClose}>
             Đóng
           </button>
         </div>
