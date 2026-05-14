@@ -1,3 +1,10 @@
+import axios from 'axios';
+
+/**
+ * A6 — Axios service layer
+ * Refactored from native fetch to axios for consistent API handling.
+ */
+
 const STORAGE_KEY = 'ddb-hrm-session';
 const DEFAULT_API_ORIGIN = 'http://localhost';
 
@@ -41,44 +48,39 @@ export const API_PROFILES = {
   },
 };
 
-function buildHeaders(token, extraHeaders = {}) {
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...extraHeaders,
-  };
-}
-
-async function parseResponse(response) {
-  const contentType = response.headers.get('content-type') || '';
-  const isJson = contentType.includes('application/json');
-  const payload = isJson ? await response.json() : await response.text();
-
-  if (!response.ok) {
-    const message =
-      typeof payload === 'object' && payload?.message
-        ? payload.message
-        : 'Yeu cau that bai';
-    throw new Error(message);
-  }
-
-  return payload;
-}
-
-async function request(profileKey, path, { method = 'GET', token, body, headers } = {}) {
+// Create a shared axios instance factory per profile
+function createAxiosInstance(profileKey, token) {
   const profile = API_PROFILES[profileKey];
-
   if (!profile) {
-    throw new Error('Profile API khong hop le');
+    throw new Error('Profile API không hợp lệ');
   }
 
-  const response = await fetch(`${profile.baseUrl}${path}`, {
-    method,
-    headers: buildHeaders(token, headers),
-    body: body ? JSON.stringify(body) : undefined,
+  const instance = axios.create({
+    baseURL: profile.baseUrl,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
 
-  return parseResponse(response);
+  // Response interceptor for error handling
+  instance.interceptors.response.use(
+    (response) => response.data,
+    (error) => {
+      const message =
+        error.response?.data?.message || error.message || 'Yêu cầu thất bại';
+      throw new Error(message);
+    },
+  );
+
+  return instance;
+}
+
+async function request(profileKey, path, { method = 'GET', token, body } = {}) {
+  const instance = createAxiosInstance(profileKey, token);
+  const config = { method, url: path };
+  if (body) config.data = body;
+  return instance(config);
 }
 
 export function saveSession(session) {
@@ -134,6 +136,7 @@ export function createPublisherApi(profileKey, token) {
     createContractType: (body) =>
       request(profileKey, '/publisher/contract-types', { method: 'POST', token, body }),
     createAccount: (body) => request(profileKey, '/publisher/accounts', { method: 'POST', token, body }),
+    createEmployee: (body) => request(profileKey, '/node/employees', { method: 'POST', token, body }),
   };
 }
 
@@ -182,6 +185,12 @@ export function createNodeApi(profileKey, token) {
 
     // ---- Nhân viên & Hợp đồng ----
     createEmployee: (body) => request(profileKey, '/node/employees', { method: 'POST', token, body }),
+    updateEmployee: (maNhanVien, body) =>
+      request(profileKey, `/node/employees/${encodeURIComponent(maNhanVien)}`, { method: 'PUT', token, body }),
+    deleteEmployee: (maNhanVien) =>
+      request(profileKey, `/node/employees/${encodeURIComponent(maNhanVien)}`, { method: 'DELETE', token }),
+    reactivateEmployee: (maNhanVien) =>
+      request(profileKey, `/node/employees/${encodeURIComponent(maNhanVien)}/reactivate`, { method: 'PATCH', token }),
     createContract: (body) => request(profileKey, '/node/contracts', { method: 'POST', token, body }),
 
     // ---- Chấm công ----
