@@ -31,12 +31,6 @@ const defaultContractForm = {
   trangThai: 'Hieu luc',
 };
 
-const defaultReportFilters = {
-  keyword: '',
-  thang: new Date().getMonth() + 1,
-  nam: new Date().getFullYear(),
-};
-
 const NODE_BRANCH_CODES = {
   node_hcm: 'CNHCM',
   node_hn: 'CNHN',
@@ -51,13 +45,23 @@ export default function Node({
   runAction,
   submittingKey,
   session,
+  publisherData,
+  reportFilters,
+  setReportFilters,
 }) {
   const [employeeForm, setEmployeeForm] = useState(defaultEmployeeForm);
   const [contractForm, setContractForm] = useState(defaultContractForm);
-  const [reportFilters, setReportFilters] = useState(defaultReportFilters);
   const [employeeFormError, setEmployeeFormError] = useState('');
   const [contractFormError, setContractFormError] = useState('');
   const branchCode = NODE_BRANCH_CODES[session?.profileKey] || '';
+
+  // Logic lọc dữ liệu Chấm công và Lương theo từ khóa (Xử lý lỗi K25)
+  const filteredAttendance = (nodeData.report.attendance || []).filter((att) =>
+    localEmployees.some((emp) => emp.MaNhanVien === att.MaNhanVien)
+  );
+  const filteredPayroll = (nodeData.report.payroll || []).filter((pay) =>
+    localEmployees.some((emp) => emp.MaNhanVien === pay.MaNhanVien)
+  );
 
   useEffect(() => {
     if (!branchCode) return;
@@ -93,21 +97,21 @@ export default function Node({
   return (
     <>
       <SectionHeader
-        eyebrow="Chi nhanh"
-        title="Nhan vien, hop dong, bao cao local"
-        description="Module nay tap trung vao cac endpoint node cho HR manager va node admin."
+        eyebrow="Chi nhánh"
+        title="Nhân viên, hợp đồng, báo cáo local"
+        description="Module này tập trung vào các endpoint node cho HR manager và node admin."
       />
 
       {!isNode ? (
-        <Panel title="Khong dung profile node" subtitle="Trang nay can dang nhap profile chi nhanh HCM hoac Ha Noi.">
+        <Panel title="Không dùng profile node">
           <p className="text-sm text-[var(--hr-muted)]">
-            Chuyen qua moi truong chi nhanh de tao nhan vien, hop dong va xem bao cao local.
+            Chuyển qua môi trường chi nhánh để tạo nhân viên, hợp đồng và xem báo cáo local.
           </p>
         </Panel>
       ) : (
         <>
           <div className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Tao nhan vien" subtitle="POST `/node/employees`">
+            <Panel title="Tạo nhân viên" >
               {employeeFormError && (
                 <div className="mb-2 rounded-xl bg-[#f3d9d2] px-3 py-2 text-sm text-[#8a3828]">
                   {employeeFormError}
@@ -126,38 +130,38 @@ export default function Node({
                   );
                 }}
               >
-                <Field label="Ma nhan vien">
+                <Field label="Mã nhân viên">
                   <Input
                     value={employeeForm.maNhanVien}
                     onChange={(event) => setEmployeeForm({ ...employeeForm, maNhanVien: event.target.value })}
                     required
                   />
                 </Field>
-                <Field label="Ho ten">
+                <Field label="Họ tên">
                   <Input
                     value={employeeForm.hoTen}
                     onChange={(event) => setEmployeeForm({ ...employeeForm, hoTen: event.target.value })}
                     required
                   />
                 </Field>
-                <Field label="Ngay sinh">
+                <Field label="Ngày sinh">
                   <Input
                     type="date"
                     value={employeeForm.ngaySinh}
                     onChange={(event) => setEmployeeForm({ ...employeeForm, ngaySinh: event.target.value })}
                   />
                 </Field>
-                <Field label="Gioi tinh">
+                <Field label="Giới tính">
                   <Select
                     value={employeeForm.gioiTinh}
                     onChange={(event) => setEmployeeForm({ ...employeeForm, gioiTinh: event.target.value })}
                   >
                     <option value="Nam">Nam</option>
-                    <option value="Nu">Nu</option>
-                    <option value="Khac">Khac</option>
+                    <option value="Nữ">Nữ</option>
+                    <option value="Khác">Khác</option>
                   </Select>
                 </Field>
-                <Field label="SDT">
+                <Field label="SĐT">
                   <Input
                     value={employeeForm.sdt}
                     onChange={(event) => setEmployeeForm({ ...employeeForm, sdt: event.target.value })}
@@ -170,34 +174,49 @@ export default function Node({
                     onChange={(event) => setEmployeeForm({ ...employeeForm, email: event.target.value })}
                   />
                 </Field>
-                <Field label="Ma phong ban">
-                  <Input
+                <Field label="Mã phòng ban">
+                  <Select
                     value={employeeForm.maPhongBan}
                     onChange={(event) => setEmployeeForm({ ...employeeForm, maPhongBan: event.target.value })}
                     required
-                  />
+                  >
+                    <option value="">-- Chọn phòng ban ({nodeData?.departments?.length||0}) --</option>
+                    {nodeData?.departments?.map(d => (
+                      <option key={d.MaPhongBan || d.maPhongBan} value={d.MaPhongBan || d.maPhongBan}>{d.TenPhongBan || d.tenPhongBan}</option>
+                    ))}
+                  </Select>
                 </Field>
-                <Field label="Ma chuc vu">
-                  <Input
+                <Field label="Mã chức vụ">
+                  <Select
                     value={employeeForm.maChucVu}
                     onChange={(event) => setEmployeeForm({ ...employeeForm, maChucVu: event.target.value })}
                     required
-                  />
+                  >
+                    <option value="">-- Chọn chức vụ ({nodeData?.positions?.length||0}) --</option>
+                    {nodeData?.positions?.map(p => (
+                      <option key={p.MaChucVu || p.maChucVu} value={p.MaChucVu || p.maChucVu}>{p.TenChucVu || p.tenChucVu}</option>
+                    ))}
+                  </Select>
                 </Field>
-                <Field label="Ngay vao lam">
+                <Field label="Ngày vào làm">
                   <Input
                     type="date"
                     value={employeeForm.ngayVaoLam}
                     onChange={(event) => setEmployeeForm({ ...employeeForm, ngayVaoLam: event.target.value })}
                   />
                 </Field>
-                <Field label="Ma chi nhanh">
-                  <Input
+                <Field label="Mã chi nhánh">
+                  <Select
                     value={employeeForm.maChiNhanh}
                     onChange={(event) => setEmployeeForm({ ...employeeForm, maChiNhanh: event.target.value })}
-                    readOnly={Boolean(branchCode)}
+                    disabled={Boolean(branchCode)}
                     required
-                  />
+                  >
+                    <option value="">-- Chọn chi nhánh --</option>
+                    {nodeData?.branches?.map(b => (
+                      <option key={b.MaChiNhanh || b.maChiNhanh} value={b.MaChiNhanh || b.maChiNhanh}>{b.TenChiNhanh || b.tenChiNhanh}</option>
+                    ))}
+                  </Select>
                 </Field>
                 <Button
                   type="submit"
@@ -206,12 +225,12 @@ export default function Node({
                   className="md:col-span-2"
                 >
                   <UserPlus className="h-4 w-4" />
-                  Tao nhan vien
+                  Tạo nhân viên
                 </Button>
               </form>
             </Panel>
 
-            <Panel title="Tao hop dong" subtitle="POST `/node/contracts`">
+            <Panel title="Tạo hợp đồng">
               {contractFormError && (
                 <div className="mb-2 rounded-xl bg-[#f3d9d2] px-3 py-2 text-sm text-[#8a3828]">
                   {contractFormError}
@@ -229,41 +248,51 @@ export default function Node({
                   );
                 }}
               >
-                <Field label="Ma hop dong">
+                <Field label="Mã hợp đồng">
                   <Input
                     value={contractForm.maHopDong}
                     onChange={(event) => setContractForm({ ...contractForm, maHopDong: event.target.value })}
                     required
                   />
                 </Field>
-                <Field label="Ma nhan vien">
-                  <Input
+                <Field label="Mã nhân viên">
+                  <Select
                     value={contractForm.maNhanVien}
                     onChange={(event) => setContractForm({ ...contractForm, maNhanVien: event.target.value })}
                     required
-                  />
+                  >
+                    <option value="">-- Chọn nhân viên ({localEmployees?.length || 0}) --</option>
+                    {localEmployees?.map(e => (
+                      <option key={e.MaNhanVien} value={e.MaNhanVien}>{e.MaNhanVien} — {e.HoTen}</option>
+                    ))}
+                  </Select>
                 </Field>
-                <Field label="Ma loai hop dong">
-                  <Input
+                <Field label="Mã loại hợp đồng">
+                  <Select
                     value={contractForm.maLoaiHopDong}
                     onChange={(event) => setContractForm({ ...contractForm, maLoaiHopDong: event.target.value })}
                     required
-                  />
+                  >
+                    <option value="">-- Chọn loại hợp đồng ({nodeData?.contractTypes?.length || 0}) --</option>
+                    {nodeData?.contractTypes?.map(ct => (
+                      <option key={ct.MaLoaiHopDong || ct.maLoaiHopDong} value={ct.MaLoaiHopDong || ct.maLoaiHopDong}>{ct.TenLoaiHopDong || ct.tenLoaiHopDong}</option>
+                    ))}
+                  </Select>
                 </Field>
-                <Field label="Trang thai">
+                <Field label="Trạng thái">
                   <Input
                     value={contractForm.trangThai}
                     onChange={(event) => setContractForm({ ...contractForm, trangThai: event.target.value })}
                   />
                 </Field>
-                <Field label="Ngay bat dau">
+                <Field label="Ngày bắt đầu">
                   <Input
                     type="date"
                     value={contractForm.ngayBatDau}
                     onChange={(event) => setContractForm({ ...contractForm, ngayBatDau: event.target.value })}
                   />
                 </Field>
-                <Field label="Ngay ket thuc">
+                <Field label="Ngày kết thúc">
                   <Input
                     type="date"
                     value={contractForm.ngayKetThuc}
@@ -277,45 +306,40 @@ export default function Node({
                   className="md:col-span-2"
                 >
                   <FileText className="h-4 w-4" />
-                  Tao hop dong
+                  Tạo hợp đồng
                 </Button>
               </form>
             </Panel>
           </div>
 
           <Panel
-            title="Bo loc bao cao local"
-            subtitle="GET `/node/reports/local`"
+            title="Bộ lọc báo cáo local"
             action={
               <Button
                 variant="secondary"
                 loading={submittingKey === 'filter-report'}
-                onClick={() =>
-                  runAction('filter-report', () => nodeApi.localReport(reportFilters), (result) =>
-                    setNodeData((previous) => ({ ...previous, report: result })),
-                  )
-                }
+                onClick={() => setReportFilters({ ...reportFilters })}
               >
                 <RefreshCw className="h-4 w-4" />
-                Nap bao cao
+                Nạp báo cáo
               </Button>
             }
           >
             <div className="grid gap-4 md:grid-cols-3">
-              <Field label="Tu khoa">
+              <Field label="Từ khóa">
                 <Input
                   value={reportFilters.keyword}
                   onChange={(event) => setReportFilters({ ...reportFilters, keyword: event.target.value })}
                 />
               </Field>
-              <Field label="Thang">
+              <Field label="Tháng">
                 <Input
                   type="number"
                   value={reportFilters.thang}
                   onChange={(event) => setReportFilters({ ...reportFilters, thang: Number(event.target.value) })}
                 />
               </Field>
-              <Field label="Nam">
+              <Field label="Năm">
                 <Input
                   type="number"
                   value={reportFilters.nam}
@@ -326,13 +350,13 @@ export default function Node({
           </Panel>
 
           <div className="grid gap-6 xl:grid-cols-3">
-            <Panel title="Nhan vien local">
+            <Panel title="Nhân viên local">
               <DataTable
                 columns={[
-                  { key: 'MaNhanVien', label: 'Ma NV' },
+                  { key: 'MaNhanVien', label: 'Mã NV' },
                   {
                     key: 'HoTen',
-                    label: 'Ho ten',
+                    label: 'Họ tên',
                     render: (row) => (
                       <div className="flex items-center gap-2">
                         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#ecd7cb] text-xs font-semibold text-[#8a3828]">
@@ -345,32 +369,32 @@ export default function Node({
                       </div>
                     ),
                   },
-                  { key: 'TenPhongBan', label: 'Phong ban' },
+                  { key: 'TenPhongBan', label: 'Phòng ban' },
                   { key: 'Email', label: 'Email' },
                 ]}
                 rows={localEmployees}
               />
             </Panel>
-            <Panel title="Tong hop cham cong">
+            <Panel title="Tổng hợp chấm công">
               <DataTable
                 columns={[
-                  { key: 'MaNhanVien', label: 'Ma' },
-                  { key: 'SoNgayChamCong', label: 'So ngay' },
+                  { key: 'MaNhanVien', label: 'Mã' },
+                  { key: 'SoNgayChamCong', label: 'Số ngày' },
                 ]}
-                rows={nodeData.report.attendance || []}
+                rows={filteredAttendance}
               />
             </Panel>
-            <Panel title="Tong hop luong">
+            <Panel title="Tổng hợp lương">
               <DataTable
                 columns={[
-                  { key: 'MaNhanVien', label: 'Ma' },
+                  { key: 'MaNhanVien', label: 'Mã' },
                   {
                     key: 'TongLuong',
-                    label: 'Tong luong',
+                    label: 'Tổng lương',
                     render: (row) => formatCurrency(row.TongLuong),
                   },
                 ]}
-                rows={nodeData.report.payroll || []}
+                rows={filteredPayroll}
               />
             </Panel>
           </div>
