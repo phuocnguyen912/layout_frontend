@@ -184,8 +184,6 @@ export function createNodeApi(profileKey, token) {
       request(profileKey, `/node/employees/${encodeURIComponent(maNhanVien)}`, { method: 'PUT', token, body }),
     deleteEmployee: (maNhanVien) =>
       request(profileKey, `/node/employees/${encodeURIComponent(maNhanVien)}`, { method: 'DELETE', token }),
-    reactivateEmployee: (maNhanVien) =>
-      request(profileKey, `/node/employees/${encodeURIComponent(maNhanVien)}/reactivate`, { method: 'PATCH', token }),
     createContract: (body) => request(profileKey, '/node/contracts', { method: 'POST', token, body }),
 
     // ---- Chấm công ----
