@@ -48,13 +48,13 @@ export default function Publisher({ isPublisher, publisherApi, publisherData, ru
       />
 
       {!isPublisher ? (
-        <Panel title="Không dùng profile Publisher" subtitle="Trang này cần đăng nhập profile Publisher để thao tác dữ liệu dùng chung.">
+        <Panel title="Không dùng profile Publisher">
           <p className="text-sm text-[var(--hr-muted)]">Đăng nhập lại với `publisher_admin` để sử dụng đầy đủ module này.</p>
         </Panel>
       ) : (
         <>
           <div className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Tạo chi nhánh" subtitle="Thêm chi nhánh mới vào hệ thống.">
+            <Panel title="Tạo chi nhánh">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {
@@ -77,7 +77,7 @@ export default function Publisher({ isPublisher, publisherApi, publisherData, ru
               </form>
             </Panel>
 
-            <Panel title="Tạo chức vụ" subtitle="Khai báo chức vụ và hệ số lương.">
+            <Panel title="Tạo chức vụ">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {
@@ -103,7 +103,7 @@ export default function Publisher({ isPublisher, publisherApi, publisherData, ru
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Tạo loại hợp đồng" subtitle="Thiết lập loại hợp đồng dùng chung.">
+            <Panel title="Tạo loại hợp đồng">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {
@@ -127,7 +127,7 @@ export default function Publisher({ isPublisher, publisherApi, publisherData, ru
               </form>
             </Panel>
 
-            <Panel title="Tạo tài khoản" subtitle="Cấp tài khoản truy cập theo vai trò.">
+            <Panel title="Tạo tài khoản">
               <form
                 className="grid gap-4 md:grid-cols-2"
                 onSubmit={(event) => {

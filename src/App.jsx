@@ -19,6 +19,7 @@ import { SEED_EMPLOYEES } from './data/employees';
 export default function App() {
   const location = useLocation();
   const [session, setSession] = useState(loadSession);
+<<<<<<< HEAD
   const [ui, setUi] = useState({ load: false, submit: '', err: '', msg: '', search: '' });
   const [pub, setPub] = useState({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [] });
   const [node, setNode] = useState({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null });
@@ -35,6 +36,15 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('ddb-emp-meta', JSON.stringify(empMeta));
   }, [empMeta]);
+=======
+  const [ui, setUi] = useState({ page: 'overview', load: false, submit: '', err: '', msg: '', search: '' });
+  const [pub, setPub] = useState({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [], departments: [] });
+  const [node, setNode] = useState({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null, branches: [], positions: [], contractTypes: [], departments: [] });
+  const [leaves, setLeaves] = useState([]);
+  const [localEmps, setLocalEmps] = useState([]);
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [reportFilters, setReportFilters] = useState({ keyword: '', thang: new Date().getMonth() + 1, nam: new Date().getFullYear() });
+>>>>>>> master
 
   useEffect(() => {
     if (!ui.msg) return;
@@ -54,13 +64,17 @@ export default function App() {
         setPub({ summary, sync, employees, branches, positions, contractTypes });
       } else {
         const a = createNodeApi(s.profileKey, s.token);
-        const d = new Date();
-        const [report, health] = await Promise.all([
-          a.localReport({ keyword: '', thang: d.getMonth() + 1, nam: d.getFullYear() }),
+        const [report, health, branches, positions, contractTypes, departments, detailedEmps] = await Promise.all([
+          a.localReport(reportFilters),
           fetchHealth(s.profileKey).catch(() => null),
+          a.listBranches().catch(e => { console.error('Lỗi listBranches:', e.message); return []; }),
+          a.listPositions().catch(e => { console.error('Lỗi listPositions:', e.message); return []; }),
+          a.listContractTypes().catch(e => { console.error('Lỗi listContractTypes:', e.message); return []; }),
+          a.listDepartments().catch(e => { console.error('Lỗi listDepartments:', e.message); return []; }),
+          a.listEmployees().catch(e => { console.error('Lỗi listEmployees:', e.message); return []; }),
         ]);
-        setNode(p => ({ ...p, report, health }));
-        setLocalEmps(report?.employees || []);
+        setNode(p => ({ ...p, report, health, branches, positions, contractTypes, departments }));
+        setLocalEmps(detailedEmps.length > 0 ? detailedEmps : (report?.employees || []));
         setSyncStatus(null);
       }
     } catch (e) {
@@ -69,7 +83,7 @@ export default function App() {
     } finally { setUi(p => ({ ...p, load: false })); }
   };
 
-  useEffect(() => { refreshAll(); }, [session]);
+  useEffect(() => { refreshAll(); }, [session, reportFilters]);
 
   const handleLogin = async ({ profileKey, username, password }) => {
     setUi(p => ({ ...p, load: true, err: '' }));
@@ -85,7 +99,7 @@ export default function App() {
   const handleLogout = (msg = '') => {
     clearSession(); setSession(null);
     setPub({ summary: null, sync: [], employees: [], branches: [], positions: [], contractTypes: [] });
-    setNode({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null });
+    setNode({ report: { employees: [], attendance: [], payroll: [] }, sync: null, health: null, branches: [], positions: [], contractTypes: [], departments: [] });
     setLeaves([]); setLocalEmps([]); setSyncStatus(null);
     setUi(p => ({ ...p, err: '', msg }));
   };
@@ -172,6 +186,7 @@ export default function App() {
   const totalPay = isPub ? (pub.summary?.salaryStats?.TongLuong || 0) : payrollChart.reduce((s, r) => s + r.salary, 0);
 
   const apiProps = { publisherApi: isPub ? createPublisherApi(session.profileKey, session.token) : null, nodeApi: isNode ? createNodeApi(session.profileKey, session.token) : null };
+<<<<<<< HEAD
   const sharedProps = { isPublisher: isPub, isNode, session, runAction, submittingKey: ui.submit, publisherData: pub, nodeData: node, saveEmpMeta };
 
   const pageMeta = {
@@ -184,6 +199,16 @@ export default function App() {
     '/contracts': 'Hợp đồng',
     '/salary': 'Lương',
     '/sync': 'Đồng bộ',
+=======
+  const sharedProps = { isPublisher: isPub, isNode, session, runAction, submittingKey: ui.submit, publisherData: pub, nodeData: node, setNodeData: setNode, reportFilters, setReportFilters };
+
+  const pages = {
+    overview: <Overview {...sharedProps} {...apiProps} filteredCompanyEmployees={filteredEmps} branchChartData={branchChart} />,
+    ...(isPub ? { publisher: <Publisher {...sharedProps} {...apiProps} /> } : {}),
+    node: <NodePage {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={localEmps} publisherData={pub} reportFilters={reportFilters} setReportFilters={setReportFilters} />,
+    attendance: <Attendance {...sharedProps} {...apiProps} setNodeData={setNode} leaves={leaves} localEmployees={localEmps} payrollChartData={payrollChart} />,
+    sync: <Sync {...sharedProps} {...apiProps} setNodeData={setNode} syncStatus={syncStatus} />
+>>>>>>> master
   };
   const breadcrumb = pageMeta[location.pathname] || 'Tổng quan';
 

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CheckCircle2, Clock3, BadgeDollarSign } from 'lucide-react';
+import { CheckCircle2, Clock3, BadgeDollarSign, RefreshCw } from 'lucide-react';
 import SectionHeader from '../components/ui/SectionHeader';
 import Panel from '../components/ui/Panel';
 import Field from '../components/ui/Field';
@@ -75,11 +75,14 @@ function ResultBox({ children }) {
 export default function Attendance({
   isNode,
   nodeApi,
+  setNodeData,
   leaves,
   runAction,
   submittingKey,
-  payrollChartData,
   localEmployees = [],
+  payrollChartData = [],
+  reportFilters,
+  setReportFilters,
 }) {
   /* ── Bước 1: Check-in / Check-out ── */
   const [ciForm, setCiForm] = useState({ maNhanVien: '', ngay: today(), gioVao: '08:00:00' });
@@ -179,7 +182,7 @@ export default function Attendance({
     return (
       <>
         <SectionHeader eyebrow="Attendance" title="Chấm công, nghỉ phép, tính lương" description="Toàn bộ thao tác nghiệp vụ node được gom vào một khu giao diện để nhập nhanh." />
-        <Panel title="Cần profile node" subtitle="Chấm công và tính lương là endpoint của node.">
+        <Panel title="Cần profile node">
           <p className="text-sm text-[var(--hr-muted)]">Đăng nhập môi trường chi nhánh để sử dụng module này.</p>
         </Panel>
       </>
@@ -193,7 +196,7 @@ export default function Attendance({
       <div className="grid gap-6 xl:grid-cols-2">
 
         {/* ── Bước 1a: Check-in ── */}
-        <Panel title="Chấm công vào" subtitle="POST /node/attendance/check-in">
+        <Panel title="Chấm công vào">
           <FormError msg={ciError} />
           <div className="grid gap-4 md:grid-cols-2">
             <EmployeeSelect
@@ -220,7 +223,7 @@ export default function Attendance({
         </Panel>
 
         {/* ── Bước 1b: Check-out ── */}
-        <Panel title="Chấm công ra" subtitle="POST /node/attendance/check-out">
+        <Panel title="Chấm công ra">
           <FormError msg={coError} />
           <div className="grid gap-4 md:grid-cols-2">
             <EmployeeSelect
@@ -247,14 +250,14 @@ export default function Attendance({
         </Panel>
 
         {/* Lịch sử chấm công — endpoint chưa được backend hỗ trợ */}
-        <Panel title="Lịch sử chấm công" subtitle="Xem tổng hợp tại báo cáo local" className="xl:col-span-2">
+        <Panel title="Lịch sử chấm công" className="xl:col-span-2">
           <p className="text-sm text-[var(--hr-muted)]">
             Endpoint tra cứu lịch sử chưa khả dụng. Dữ liệu chấm công tổng hợp có thể xem tại trang <strong>Chi nhánh → Bộ lọc báo cáo local</strong>.
           </p>
         </Panel>
 
         {/* ── Bước 3a: Gửi đơn nghỉ phép ── */}
-        <Panel title="Gửi đơn nghỉ phép" subtitle="POST /node/leaves">
+        <Panel title="Gửi đơn nghỉ phép">
           <FormError msg={leaveError} />
           <div className="grid gap-4 md:grid-cols-2">
             <EmployeeSelect
@@ -284,7 +287,7 @@ export default function Attendance({
         </Panel>
 
         {/* ── Bước 3c: Duyệt / Từ chối ── */}
-        <Panel title="Duyệt / Từ chối đơn" subtitle="PUT /node/leaves/:id/approval">
+        <Panel title="Duyệt / Từ chối đơn">
           <FormError msg={approvalError} />
           <p className="mb-3 text-xs text-[var(--hr-muted)]">Click vào row trong danh sách bên dưới để tự điền mã, hoặc nhập tay.</p>
           <div className="grid gap-4 md:grid-cols-2">
@@ -310,7 +313,6 @@ export default function Attendance({
         {/* ── Bước 3b: Danh sách đơn nghỉ ── */}
         <Panel
           title="Danh sách đơn nghỉ phép"
-          subtitle="Click vào row để điền mã duyệt"
           className="xl:col-span-2"
           action={
             <span className="text-xs text-[var(--hr-muted)]">
@@ -361,7 +363,7 @@ export default function Attendance({
         </Panel>
 
         {/* ── Bước 4: Tính lương ── */}
-        <Panel title="Tính lương" subtitle="POST /node/salaries/generate">
+        <Panel title="Tính lương">
           <FormError msg={salaryError} />
           <div className="grid gap-4 md:grid-cols-2">
             <EmployeeSelect
@@ -419,14 +421,29 @@ export default function Attendance({
         </Panel>
 
         {/* ── Biểu đồ lương ── */}
-        <Panel title="Lương theo nhân viên" subtitle="Biểu đồ từ kết quả báo cáo local đang nạp.">
+        <Panel title="Lương theo nhân viên" className="xl:col-span-2">
+          <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl bg-[#fbf5ee] p-4 border border-[#e0d0c1]">
+            <div className="w-24">
+              <Field label="Tháng">
+                <Input type="number" value={reportFilters?.thang || ''} onChange={(e) => setReportFilters({ ...reportFilters, thang: Number(e.target.value) })} />
+              </Field>
+            </div>
+            <div className="w-32">
+              <Field label="Năm">
+                <Input type="number" value={reportFilters?.nam || ''} onChange={(e) => setReportFilters({ ...reportFilters, nam: Number(e.target.value) })} />
+              </Field>
+            </div>
+            <Button variant="secondary" loading={submittingKey === 'filter-report'} onClick={() => setReportFilters({ ...reportFilters })}>
+              <RefreshCw className="h-4 w-4" /> Lọc
+            </Button>
+          </div>
           {payrollChartData.length > 0 ? (
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={payrollChartData}>
                   <CartesianGrid stroke="#e7d8ca" strokeDasharray="4 4" />
-                  <XAxis dataKey="name" stroke="#8a7768" />
-                  <YAxis stroke="#8a7768" />
+                  <XAxis dataKey="name" stroke="#8a7768" interval={0} angle={-30} textAnchor="end" height={80} tick={{ fontSize: 11 }} />
+                  <YAxis stroke="#8a7768" width={100} tickFormatter={(value) => formatCurrency(value)} tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(value) => formatCurrency(value)} />
                   <Bar dataKey="salary" fill="#b55233" radius={[10, 10, 0, 0]} />
                 </BarChart>

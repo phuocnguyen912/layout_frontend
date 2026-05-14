@@ -1,10 +1,9 @@
+import { useState } from 'react';
 import {
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -14,9 +13,9 @@ import SectionHeader from '../components/ui/SectionHeader';
 import Panel from '../components/ui/Panel';
 import StatusPill from '../components/ui/StatusPill';
 import DataTable from '../components/ui/DataTable';
-import { formatDateTime, getInitials, formatCurrency } from '../utils/format';
+import { formatDateTime, getInitials } from '../utils/format';
 
-export default function Overview({ isPublisher, publisherData, nodeData, session, filteredCompanyEmployees, branchChartData, payrollChartData }) {
+export default function Overview({ isPublisher, publisherData, nodeData, session, filteredCompanyEmployees, branchChartData }) {
   return (
     <>
       <SectionHeader
@@ -26,14 +25,14 @@ export default function Overview({ isPublisher, publisherData, nodeData, session
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        <Panel title="Phân bổ nhân sự theo chi nhánh" subtitle="Tổng hợp số lượng nhân sự ở từng chi nhánh.">
+        <Panel title="Phân bổ nhân sự theo chi nhánh">
           {branchChartData.length > 0 ? (
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={branchChartData}>
                   <CartesianGrid stroke="#e7d8ca" strokeDasharray="4 4" />
-                  <XAxis dataKey="name" stroke="#8a7768" />
-                  <YAxis stroke="#8a7768" />
+                  <XAxis dataKey="name" stroke="#8a7768" interval={0} angle={-30} textAnchor="end" height={60} tick={{ fontSize: 11 }} />
+                  <YAxis stroke="#8a7768" width={40} tick={{ fontSize: 11 }} />
                   <Tooltip />
                   <Bar dataKey="employees" radius={[10, 10, 0, 0]}>
                     {branchChartData.map((item, index) => (
@@ -48,7 +47,7 @@ export default function Overview({ isPublisher, publisherData, nodeData, session
           )}
         </Panel>
 
-        <Panel title="Trạng thái đồng bộ" subtitle="Theo dõi kết nối và lần đồng bộ gần nhất.">
+        <Panel title="Trạng thái đồng bộ">
           <div className="space-y-4">
             {(isPublisher ? publisherData.sync : []).length > 0 ? (
               publisherData.sync.map((item) => (
@@ -73,7 +72,7 @@ export default function Overview({ isPublisher, publisherData, nodeData, session
         </Panel>
       </div>
 
-      <Panel title="Danh sách nhân sự / tìm kiếm" subtitle="Tra cứu nhân sự theo môi trường hiện tại.">
+      <Panel title="Danh sách nhân sự / tìm kiếm">
         <DataTable
           columns={[
             {
@@ -102,22 +101,6 @@ export default function Overview({ isPublisher, publisherData, nodeData, session
           rows={filteredCompanyEmployees}
         />
       </Panel>
-
-      {payrollChartData.length > 0 ? (
-        <Panel title="Top lương theo kỳ lọc" subtitle="Các nhân viên có tổng lương cao trong kỳ hiện tại.">
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={payrollChartData}>
-                <CartesianGrid stroke="#e7d8ca" strokeDasharray="4 4" />
-                <XAxis dataKey="name" stroke="#8a7768" />
-                <YAxis stroke="#8a7768" />
-                <Tooltip formatter={(value) => formatCurrency(value)} />
-                <Line type="monotone" dataKey="salary" stroke="#7a3420" strokeWidth={3} dot={{ r: 4, fill: '#b55233' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
-      ) : null}
     </>
   );
 }
