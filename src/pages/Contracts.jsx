@@ -1,18 +1,16 @@
-import SectionHeader from '../components/ui/SectionHeader';
-import Panel from '../components/ui/Panel';
+import PagePlaceholder from '../components/ui/PagePlaceholder';
 
 export default function Contracts() {
   return (
-    <>
-      <SectionHeader
-        eyebrow="Contracts"
-        title="Quản lý hợp đồng"
-        description="Trang quản lý hợp đồng lao động. Hiện đang là khung route để mở rộng."
-      />
-      <Panel title="Hợp đồng" subtitle="TODO: Tách đầy đủ CRUD hợp đồng cho route `/contracts`.">
-        <p className="text-sm text-[var(--hr-muted)]">Module `contracts` đã sẵn sàng về điều hướng.</p>
-      </Panel>
-    </>
+    <PagePlaceholder
+      eyebrow="Contracts"
+      title="Quản lý hợp đồng"
+      description="Trang quản lý hợp đồng lao động. Hiện đang là khung route để mở rộng."
+      panelTitle="Hợp đồng"
+      panelSubtitle="TODO: Tách đầy đủ CRUD hợp đồng cho route `/contracts`."
+    >
+      Module `contracts` đã sẵn sàng về điều hướng.
+    </PagePlaceholder>
   );
 }
 

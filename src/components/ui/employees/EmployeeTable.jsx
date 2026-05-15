@@ -1,6 +1,8 @@
-import DataTable from '../../components/ui/DataTable';
-import StatusPill from '../../components/ui/StatusPill';
-import { getInitials } from '../../utils/format';
+import DataTable from '../DataTable';
+import StatusPill from '../StatusPill';
+import Avatar from './Avatar';
+import EmployeeInfo from './EmployeeInfo';
+import { getInitials } from '../../../utils/format';
 import { resolveEmployeeStatus } from './employeeUtils';
 import { Eye, Pencil, UserX, UserCheck } from 'lucide-react';
 
@@ -24,12 +26,15 @@ function IconBtn({ icon: Icon, title, onClick, colorClass, loading = false }) {
 export default function EmployeeTable({
   rows,
   isNode,
+  canManage,
   submittingKey,
   onView,
   onEdit,
   onDelete,
   onReactivate,
 }) {
+  const showManageActions = canManage ?? isNode;
+
   return (
     <DataTable
       columns={[
@@ -37,17 +42,10 @@ export default function EmployeeTable({
           key: 'identity',
           label: 'Nhân viên',
           render: (row) => (
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#ecd7cb] text-sm font-semibold text-[#8a3828]">
-                {getInitials(row.HoTen)}
-              </div>
-              <div>
-                <p className="font-semibold text-[var(--hr-ink)]">{row.HoTen || 'N/A'}</p>
-                <p className="text-xs text-[var(--hr-muted)]">
-                  {row.MaNhanVien}{row.TenChucVu ? ` • ${row.TenChucVu}` : ''}
-                </p>
-              </div>
-            </div>
+            <EmployeeInfo 
+              name={row.HoTen} 
+              subtext={`${row.MaNhanVien}${row.TenChucVu ? ` • ${row.TenChucVu}` : ''}`} 
+            />
           ),
         },
         { key: 'Email', label: 'Email' },
@@ -55,7 +53,7 @@ export default function EmployeeTable({
         {
           key: 'branch',
           label: 'Chi nhánh / phòng ban',
-          render: (row) => row.TenChiNhanh || row.TenPhongBan || row.MaChiNhanh || 'Nội bộ node',
+          render: (row) => row.TenChiNhanh || row.TenPhongBan || row.MaChiNhanh || 'Nội bộ Chi nhánh',
         },
         {
           key: 'status',
@@ -75,7 +73,7 @@ export default function EmployeeTable({
                   onClick={() => onView(row)}
                   colorClass="border-[#ddd0c4] bg-white text-[#7a6a60] hover:bg-[#f6ede2] hover:text-[#3f342d]"
                 />
-                {isNode && (
+                {showManageActions && (
                   <>
                     <IconBtn
                       icon={Pencil}

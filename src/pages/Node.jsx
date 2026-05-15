@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
-import { UserPlus, FileText, RefreshCw } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import SectionHeader from '../components/ui/SectionHeader';
 import Panel from '../components/ui/Panel';
-import Field from '../components/ui/Field';
-import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
-import Button from '../components/ui/Button';
-import DataTable from '../components/ui/DataTable';
-import { getInitials, formatCurrency } from '../utils/format';
-import EmployeeAddModal from './employees/EmployeeAddModal';
+import PermissionGuard from '../components/layout/PermissionGuard';
+import ResponsiveGrid from '../components/layout/ResponsiveGrid';
+import EmployeeAddModal from '../components/ui/employees/EmployeeAddModal';
+import EmployeeDetailModal from '../components/ui/employees/EmployeeDetailModal';
+import EmployeeEditModal from '../components/ui/employees/EmployeeEditModal';
+import EmployeeDeleteConfirmModal from '../components/ui/employees/EmployeeDeleteConfirmModal';
+import { buildEditForm, resolveEmployeeKey } from '../components/ui/employees/employeeUtils';
+import ContractFormPanel from '../components/ui/node/ContractFormPanel';
+import LocalReportFilters from '../components/ui/node/LocalReportFilters';
+import EmployeeOnboardingPanel from '../components/ui/node/EmployeeOnboardingPanel';
+import LocalReportTables from '../components/ui/node/LocalReportTables';
 import { SEED_DEPARTMENTS, SEED_POSITIONS } from '../data/employees';
 
 const defaultContractForm = {
@@ -43,9 +46,13 @@ export default function Node({
   saveEmpMeta,
 }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [viewEmployee, setViewEmployee] = useState(null);
+  const [editEmployee, setEditEmployee] = useState(null);
+  const [deleteEmployeeTarget, setDeleteEmployeeTarget] = useState(null);
+  const [editForm, setEditForm] = useState(buildEditForm());
+  const [editError, setEditError] = useState('');
   const [contractForm, setContractForm] = useState(defaultContractForm);
   const [reportFilters, setReportFilters] = useState(defaultReportFilters);
-  const [contractFormError, setContractFormError] = useState('');
   const branchCode = NODE_BRANCH_CODES[session?.profileKey] || '';
 
   const availableDepts = useMemo(() => {
@@ -64,15 +71,86 @@ export default function Node({
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [localEmployees]);
 
-  function validateContractForm(form) {
-    if (!form.maHopDong?.trim()) return 'Mã hợp đồng không được để trống.';
-    if (form.maHopDong.trim().length > 10) return 'Mã hợp đồng tối đa 10 ký tự.';
-    if (!form.maNhanVien?.trim()) return 'Mã nhân viên không được để trống.';
-    if (form.maNhanVien.trim().length > 10) return 'Mã nhân viên tối đa 10 ký tự.';
-    if (!form.maLoaiHopDong?.trim()) return 'Mã loại hợp đồng không được để trống.';
-    if (form.maLoaiHopDong.trim().length > 10) return 'Mã loại hợp đồng tối đa 10 ký tự.';
-    return '';
-  }
+  const openEditModal = (employee) => {
+    setEditEmployee(employee);
+    setEditForm({ ...buildEditForm(employee), MaChiNhanh: employee.MaChiNhanh || branchCode });
+    setEditError('');
+  };
+
+  const handleSaveEdit = (event) => {
+    event.preventDefault();
+    if (!editEmployee || !nodeApi?.updateEmployee) return;
+
+    if (!editForm.HoTen.trim()) {
+      setEditError('Họ tên không được để trống.');
+      return;
+    }
+
+    if (!editForm.MaPhongBan.trim()) {
+      setEditError('Mã phòng ban không được để trống.');
+      return;
+    }
+
+    if (!editForm.MaChucVu.trim()) {
+      setEditError('Mã chức vụ không được để trống.');
+      return;
+    }
+
+    runAction(
+      'update-employee',
+      () => nodeApi.updateEmployee(resolveEmployeeKey(editEmployee), {
+        hoTen: editForm.HoTen.trim(),
+        email: editForm.Email.trim() || undefined,
+        sdt: editForm.SDT.trim() || undefined,
+        maPhongBan: editForm.MaPhongBan.trim(),
+        maChucVu: editForm.MaChucVu.trim(),
+        maChiNhanh: editForm.MaChiNhanh || branchCode,
+        trangThai: editForm.TrangThai,
+        ngaySinh: editForm.NgaySinh || undefined,
+        ngayVaoLam: editForm.NgayVaoLam || undefined,
+        gioiTinh: editForm.GioiTinh || editEmployee.GioiTinh || 'Nam',
+      }),
+      () => {
+        const dept = SEED_DEPARTMENTS.find(d => d.MaPhongBan === editForm.MaPhongBan);
+        const pos = SEED_POSITIONS.find(p => p.MaChucVu === editForm.MaChucVu);
+        if (saveEmpMeta) {
+          saveEmpMeta(editForm.MaNhanVien, {
+            sdt: editForm.SDT,
+            email: editForm.Email,
+            ngaySinh: editForm.NgaySinh,
+            ngayVaoLam: editForm.NgayVaoLam,
+            maChiNhanh: editForm.MaChiNhanh || branchCode,
+            tenChiNhanh: (editForm.MaChiNhanh || branchCode) === 'CNHCM' ? 'Chi nhánh HCM' : 'Chi nhánh Hà Nội',
+            tenPhongBan: dept?.TenPhongBan || editForm.MaPhongBan,
+            tenChucVu: pos?.TenChucVu || editForm.MaChucVu,
+            maPhongBan: editForm.MaPhongBan,
+            maChucVu: editForm.MaChucVu,
+          });
+        }
+        setEditEmployee(null);
+        setEditError('');
+      },
+    );
+  };
+
+  const handleDeleteEmployee = () => {
+    if (!deleteEmployeeTarget || !nodeApi?.deleteEmployee) return;
+
+    runAction(
+      'delete-employee',
+      () => nodeApi.deleteEmployee(resolveEmployeeKey(deleteEmployeeTarget)),
+      () => setDeleteEmployeeTarget(null),
+    );
+  };
+
+  const handleReactivateEmployee = (employee) => {
+    if (!nodeApi?.reactivateEmployee) return;
+
+    runAction(
+      'reactivate-employee',
+      () => nodeApi.reactivateEmployee(resolveEmployeeKey(employee)),
+    );
+  };
 
   return (
     <>
@@ -82,202 +160,48 @@ export default function Node({
         description="Module này tập trung vào các endpoint node cho HR manager và node admin."
       />
 
-      {!isNode ? (
-        <Panel title="Không dùng profile node" subtitle="Trang này cần đăng nhập profile chi nhánh HCM hoặc Hà Nội.">
-          <p className="text-sm text-[var(--hr-muted)]">
-            Chuyển qua môi trường chi nhánh để tạo nhân viên, hợp đồng và xem báo cáo local.
-          </p>
-        </Panel>
-      ) : (
-        <>
-          <div className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Quản lý nhân viên" subtitle="Thao tác với hồ sơ nhân sự local.">
-              <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#ecd7cb] text-[#8a3828]">
-                  <UserPlus className="h-8 w-8" />
-                </div>
-                <h4 className="text-lg font-semibold text-[var(--hr-ink)]">Thêm nhân viên mới</h4>
-                <p className="mt-2 mb-6 max-w-xs text-sm text-[var(--hr-muted)]">
-                  Khởi tạo hồ sơ nhân sự mới cho chi nhánh {branchCode}. Dữ liệu sẽ được lưu tại Node local trước khi đồng bộ.
-                </p>
-                <Button
-                  variant="accent"
-                  size="lg"
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="w-full sm:w-auto"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Mở form thêm nhân viên
-                </Button>
-              </div>
-            </Panel>
-
-            <Panel title="Tạo hợp đồng" subtitle="POST `/node/contracts`">
-              {contractFormError && (
-                <div className="mb-2 rounded-xl bg-[#f3d9d2] px-3 py-2 text-sm text-[#8a3828]">
-                  {contractFormError}
-                </div>
-              )}
-              <form
-                className="grid gap-4 md:grid-cols-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const err = validateContractForm(contractForm);
-                  if (err) { setContractFormError(err); return; }
-                  setContractFormError('');
-                  runAction('create-contract', () => nodeApi.createContract(contractForm), () =>
-                    setContractForm(defaultContractForm),
-                  );
-                }}
-              >
-                <Field label="Ma hop dong">
-                  <Input
-                    value={contractForm.maHopDong}
-                    onChange={(event) => setContractForm({ ...contractForm, maHopDong: event.target.value })}
-                    required
-                  />
-                </Field>
-                <Field label="Ma nhan vien">
-                  <Input
-                    value={contractForm.maNhanVien}
-                    onChange={(event) => setContractForm({ ...contractForm, maNhanVien: event.target.value })}
-                    required
-                  />
-                </Field>
-                <Field label="Ma loai hop dong">
-                  <Input
-                    value={contractForm.maLoaiHopDong}
-                    onChange={(event) => setContractForm({ ...contractForm, maLoaiHopDong: event.target.value })}
-                    required
-                  />
-                </Field>
-                <Field label="Trang thai">
-                  <Input
-                    value={contractForm.trangThai}
-                    onChange={(event) => setContractForm({ ...contractForm, trangThai: event.target.value })}
-                  />
-                </Field>
-                <Field label="Ngay bat dau">
-                  <Input
-                    type="date"
-                    value={contractForm.ngayBatDau}
-                    onChange={(event) => setContractForm({ ...contractForm, ngayBatDau: event.target.value })}
-                  />
-                </Field>
-                <Field label="Ngay ket thuc">
-                  <Input
-                    type="date"
-                    value={contractForm.ngayKetThuc}
-                    onChange={(event) => setContractForm({ ...contractForm, ngayKetThuc: event.target.value })}
-                  />
-                </Field>
-                <Button
-                  type="submit"
-                  variant="accent"
-                  loading={submittingKey === 'create-contract'}
-                  className="md:col-span-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Tao hop dong
-                </Button>
-              </form>
-            </Panel>
-          </div>
-
-          <Panel
-            title="Bộ lọc báo cáo local"
-            subtitle="GET `/node/reports/local`"
-            action={
-              <Button
-                variant="secondary"
-                loading={submittingKey === 'filter-report'}
-                onClick={() =>
-                  runAction('filter-report', () => nodeApi.localReport(reportFilters), (result) =>
-                    setNodeData((previous) => ({ ...previous, report: result })),
-                  )
-                }
-              >
-                <RefreshCw className="h-4 w-4" />
-                Nạp báo cáo
-              </Button>
-            }
-          >
-            <div className="grid gap-4 md:grid-cols-3">
-              <Field label="Tu khoa">
-                <Input
-                  value={reportFilters.keyword}
-                  onChange={(event) => setReportFilters({ ...reportFilters, keyword: event.target.value })}
-                />
-              </Field>
-              <Field label="Thang">
-                <Input
-                  type="number"
-                  value={reportFilters.thang}
-                  onChange={(event) => setReportFilters({ ...reportFilters, thang: Number(event.target.value) })}
-                />
-              </Field>
-              <Field label="Nam">
-                <Input
-                  type="number"
-                  value={reportFilters.nam}
-                  onChange={(event) => setReportFilters({ ...reportFilters, nam: Number(event.target.value) })}
-                />
-              </Field>
-            </div>
+      <PermissionGuard 
+        hasPermission={isNode} 
+        title="Không dùng profile node" 
+        subtitle="Trang này cần đăng nhập profile chi nhánh HCM hoặc Hà Nội."
+        description="Chuyển qua môi trường chi nhánh để tạo nhân viên, hợp đồng và xem báo cáo local."
+      >
+        <ResponsiveGrid>
+          <Panel title="Quản lý nhân viên" subtitle="Thao tác với hồ sơ nhân sự local.">
+            <EmployeeOnboardingPanel onAdd={() => setIsAddModalOpen(true)} />
           </Panel>
 
-          <div className="grid gap-6 xl:grid-cols-3">
-            <Panel title="Nhân viên local">
-              <DataTable
-                columns={[
-                  { key: 'MaNhanVien', label: 'Ma NV' },
-                  {
-                    key: 'HoTen',
-                    label: 'Ho ten',
-                    render: (row) => (
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#ecd7cb] text-xs font-semibold text-[#8a3828]">
-                          {getInitials(row.HoTen)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-[var(--hr-ink)]">{row.HoTen}</p>
-                          <p className="text-xs text-[var(--hr-muted)]">{row.TenChucVu || 'N/A'}</p>
-                        </div>
-                      </div>
-                    ),
-                  },
-                  { key: 'TenPhongBan', label: 'Phong ban' },
-                  { key: 'TenChucVu', label: 'Chuc vu' },
-                  { key: 'Email', label: 'Email' },
-                ]}
-                rows={localEmployees}
-              />
-            </Panel>
-            <Panel title="Tổng hợp chấm công">
-              <DataTable
-                columns={[
-                  { key: 'MaNhanVien', label: 'Ma' },
-                  { key: 'SoNgayChamCong', label: 'So ngay' },
-                ]}
-                rows={nodeData.report.attendance || []}
-              />
-            </Panel>
-            <Panel title="Tổng hợp lương">
-              <DataTable
-                columns={[
-                  { key: 'MaNhanVien', label: 'Ma' },
-                  {
-                    key: 'TongLuong',
-                    label: 'Tong luong',
-                    render: (row) => formatCurrency(row.TongLuong),
-                  },
-                ]}
-                rows={nodeData.report.payroll || []}
-              />
-            </Panel>
-          </div>
-        </>
-      )}
+          <ContractFormPanel 
+            form={contractForm}
+            setForm={setContractForm}
+            submitting={submittingKey === 'create-contract'}
+            onSubmit={() => runAction('create-contract', () => nodeApi.createContract(contractForm), () => setContractForm(defaultContractForm))}
+          />
+        </ResponsiveGrid>
+
+        <LocalReportFilters 
+          filters={reportFilters}
+          setFilters={setReportFilters}
+          submitting={submittingKey === 'filter-report'}
+          onRefresh={() =>
+            runAction('filter-report', () => nodeApi.localReport(reportFilters), (result) =>
+              setNodeData((previous) => ({ ...previous, report: result })),
+            )
+          }
+        />
+
+        <LocalReportTables
+          employees={localEmployees}
+          attendance={nodeData.report.attendance || []}
+          payroll={nodeData.report.payroll || []}
+          isNode={isNode}
+          submittingKey={submittingKey}
+          onViewEmployee={(employee) => setViewEmployee(employee)}
+          onEditEmployee={openEditModal}
+          onDeleteEmployee={(employee) => setDeleteEmployeeTarget(employee)}
+          onReactivateEmployee={handleReactivateEmployee}
+        />
+      </PermissionGuard>
 
       <EmployeeAddModal
         isOpen={isAddModalOpen}
@@ -309,6 +233,22 @@ export default function Node({
         existingIds={localEmployees.map(r => r.MaNhanVien)}
         departments={availableDepts}
         positions={availablePositions}
+      />
+      <EmployeeDetailModal employee={viewEmployee} onClose={() => setViewEmployee(null)} />
+      <EmployeeEditModal
+        employee={editEmployee}
+        editForm={editForm}
+        editError={editError}
+        submittingKey={submittingKey}
+        onClose={() => setEditEmployee(null)}
+        onChange={(patch) => setEditForm((previous) => ({ ...previous, ...patch }))}
+        onSubmit={handleSaveEdit}
+      />
+      <EmployeeDeleteConfirmModal
+        employee={deleteEmployeeTarget}
+        submittingKey={submittingKey}
+        onCancel={() => setDeleteEmployeeTarget(null)}
+        onConfirm={handleDeleteEmployee}
       />
     </>
   );

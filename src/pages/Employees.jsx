@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import SectionHeader from '../components/ui/SectionHeader';
 import Panel from '../components/ui/Panel';
-import Select from '../components/ui/Select';
 import Toast from '../components/ui/Toast';
+import Pagination from '../components/ui/Pagination';
 import useTableState from '../hooks/useTableState';
-import EmployeeTable from './employees/EmployeeTable';
-import EmployeeDetailModal from './employees/EmployeeDetailModal';
-import EmployeeEditModal from './employees/EmployeeEditModal';
-import EmployeeDeleteConfirmModal from './employees/EmployeeDeleteConfirmModal';
-import EmployeeAddModal from './employees/EmployeeAddModal';
-import { buildEditForm, resolveEmployeeKey, resolveEmployeeStatus } from './employees/employeeUtils';
-import Button from '../components/ui/Button';
-import { UserPlus } from 'lucide-react';
+import EmployeeTable from '../components/ui/employees/EmployeeTable';
+import EmployeeListToolbar from '../components/ui/employees/EmployeeListToolbar';
+import EmployeeDetailModal from '../components/ui/employees/EmployeeDetailModal';
+import EmployeeEditModal from '../components/ui/employees/EmployeeEditModal';
+import EmployeeDeleteConfirmModal from '../components/ui/employees/EmployeeDeleteConfirmModal';
+import EmployeeAddModal from '../components/ui/employees/EmployeeAddModal';
+import { buildEditForm, resolveEmployeeKey, resolveEmployeeStatus } from '../components/ui/employees/employeeUtils';
 import { SEED_DEPARTMENTS, SEED_POSITIONS } from '../data/employees';
 
 const PAGE_SIZE = 10;
@@ -85,7 +84,8 @@ export default function Employees({
 
   const handleSaveEdit = (event) => {
     event.preventDefault();
-    if (!editEmployee || !isNode || !nodeApi) return;
+    const api = isNode ? nodeApi : publisherApi;
+    if (!editEmployee || !api?.updateEmployee) return;
     if (!editForm.HoTen.trim()) {
       setEditError('Họ tên không được để trống.');
       return;
@@ -108,12 +108,17 @@ export default function Employees({
     runAction(
       'update-employee',
       () =>
-        nodeApi.updateEmployee(resolveEmployeeKey(editEmployee), {
+        api.updateEmployee(resolveEmployeeKey(editEmployee), {
           hoTen: editForm.HoTen.trim(),
           email: editForm.Email.trim() || undefined,
           sdt: editForm.SDT.trim() || undefined,
           maPhongBan: editForm.MaPhongBan.trim(),
           maChucVu: editForm.MaChucVu.trim(),
+          maChiNhanh: editForm.MaChiNhanh || editEmployee.MaChiNhanh,
+          trangThai: editForm.TrangThai,
+          ngaySinh: editForm.NgaySinh || undefined,
+          ngayVaoLam: editForm.NgayVaoLam || undefined,
+          gioiTinh: editForm.GioiTinh || editEmployee.GioiTinh || 'Nam',
         }),
       () => {
         const dept = SEED_DEPARTMENTS.find(d => d.MaPhongBan === editForm.MaPhongBan);
@@ -125,7 +130,7 @@ export default function Employees({
             ngaySinh: editForm.NgaySinh,
             ngayVaoLam: editForm.NgayVaoLam,
             maChiNhanh: editForm.MaChiNhanh || editEmployee.MaChiNhanh,
-            tenChiNhanh: (editForm.MaChiNhanh || editEmployee.MaChiNhanh) === 'CNHCM' ? 'Chi nhánh HCM' : 'Chi nhánh Hà Nội',
+            tenChiNhanh: (editForm.MaChiNhanh || editEmployee.MaChiNhanh) === 'CNHCM' ? 'Chi nhánh TP. Hồ Chí Minh' : 'Chi nhánh Hà Nội',
             tenPhongBan: dept?.TenPhongBan || editForm.MaPhongBan,
             tenChucVu: pos?.TenChucVu || editForm.MaChucVu,
             maPhongBan: editForm.MaPhongBan,
@@ -140,10 +145,11 @@ export default function Employees({
   };
 
   const handleDeleteEmployee = () => {
-    if (!isNode || !nodeApi || !deleteEmployeeTarget) return;
+    const api = isNode ? nodeApi : publisherApi;
+    if (!api?.deleteEmployee || !deleteEmployeeTarget) return;
     runAction(
       'delete-employee',
-      () => nodeApi.deleteEmployee(resolveEmployeeKey(deleteEmployeeTarget)),
+      () => api.deleteEmployee(resolveEmployeeKey(deleteEmployeeTarget)),
       () => {
         setToast({ type: 'success', message: 'Đã chuyển nhân viên sang trạng thái nghỉ việc.' });
         setDeleteEmployeeTarget(null);
@@ -152,10 +158,11 @@ export default function Employees({
   };
 
   const handleReactivateEmployee = (employee) => {
-    if (!isNode || !nodeApi) return;
+    const api = isNode ? nodeApi : publisherApi;
+    if (!api?.reactivateEmployee) return;
     runAction(
       'reactivate-employee',
-      () => nodeApi.reactivateEmployee(resolveEmployeeKey(employee)),
+      () => api.reactivateEmployee(resolveEmployeeKey(employee)),
       () => {
         setToast({ type: 'success', message: `Đã kích hoạt lại nhân viên ${employee.HoTen}.` });
       },
@@ -193,6 +200,7 @@ export default function Employees({
   };
 
   const branchCode = session?.profileKey === 'node_hcm' ? 'CNHCM' : session?.profileKey === 'node_hn' ? 'CNHN' : '';
+  const canManageEmployees = Boolean((isNode ? nodeApi : publisherApi)?.updateEmployee);
 
   return (
     <>
@@ -207,26 +215,18 @@ export default function Employees({
         title="Danh sách nhân sự"
         subtitle={`Tổng ${filteredRows.length} nhân viên sau khi lọc.`}
         action={(
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="accent" onClick={() => setIsAddModalOpen(true)}>
-              <UserPlus className="h-4 w-4" />
-              Thêm nhân viên
-            </Button>
-            <div className="min-w-[200px]">
-              <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status === 'all' ? 'Tất cả trạng thái' : status}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
+          <EmployeeListToolbar
+            statusFilter={statusFilter}
+            statusOptions={statusOptions}
+            onStatusChange={setStatusFilter}
+            onAdd={() => setIsAddModalOpen(true)}
+          />
         )}
       >
         <EmployeeTable
           rows={pagedRows}
           isNode={isNode}
+          canManage={canManageEmployees}
           submittingKey={submittingKey}
           onView={(employee) => setViewEmployee(employee)}
           onEdit={(employee) => openEditModal(employee)}
@@ -234,29 +234,11 @@ export default function Employees({
           onReactivate={handleReactivateEmployee}
         />
 
-        <div className="mt-4 flex flex-col gap-3 text-sm text-[var(--hr-muted)] sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            Trang {page}/{totalPages}
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="rounded-xl border border-[#decebd] px-3 py-2 text-[var(--hr-ink)] disabled:cursor-not-allowed disabled:opacity-40"
-              onClick={() => setPage((previous) => Math.max(1, previous - 1))}
-              disabled={page <= 1}
-            >
-              Trước
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-[#decebd] px-3 py-2 text-[var(--hr-ink)] disabled:cursor-not-allowed disabled:opacity-40"
-              onClick={() => setPage((previous) => Math.min(totalPages, previous + 1))}
-              disabled={page >= totalPages}
-            >
-              Sau
-            </button>
-          </div>
-        </div>
+        <Pagination 
+          currentPage={page} 
+          totalPages={totalPages} 
+          onPageChange={setPage} 
+        />
       </Panel>
 
       <EmployeeDetailModal employee={viewEmployee} onClose={() => setViewEmployee(null)} />
@@ -284,9 +266,7 @@ export default function Employees({
         isNode={isNode}
         initialMaChiNhanh={branchCode}
         branches={publisherData?.branches || []}
-        existingIds={employees.map(r => r.MaNhanVien)}
-        departments={availableDepts}
-        positions={availablePositions}
+        existingIds={(publisherData?.employees || []).map(r => r.MaNhanVien)}
       />
     </>
   );
