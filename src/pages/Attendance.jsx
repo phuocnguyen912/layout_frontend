@@ -1,201 +1,183 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import SectionHeader from '../components/ui/SectionHeader';
-import PermissionGuard from '../components/layout/PermissionGuard';
-import ResponsiveGrid from '../components/layout/ResponsiveGrid';
-import AttendanceWorkdayPanel from '../components/ui/attendance/AttendanceWorkdayPanel';
-import LeaveManagementPanel from '../components/ui/attendance/LeaveManagementPanel';
-import PayrollOverviewPanel from '../components/ui/attendance/PayrollOverviewPanel';
-import AttendanceSummaryCards from '../components/ui/attendance/AttendanceSummaryCards';
-
-/* ─── helpers ─── */
-function today() { return new Date().toISOString().slice(0, 10); }
-
-function validateMaNV(v) {
-  if (!v?.trim()) return 'Mã nhân viên không được để trống.';
-  if (v.trim().length > 10) return 'Mã nhân viên tối đa 10 ký tự.';
-  return '';
-}
-function validateTime(v) {
-  if (!v?.trim()) return 'Giờ không được để trống.';
-  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(v.trim())) return 'Định dạng giờ phải là HH:mm hoặc HH:mm:ss.';
-  return '';
-}
-function ensureSeconds(t) {
-  return t && t.split(':').length === 2 ? t + ':00' : t;
-}
+import Panel from '../components/ui/Panel';
+import AttendanceCalendar from '../features/attendance/components/AttendanceCalendar';
+import AttendanceCheckForm from '../features/attendance/components/AttendanceCheckForm';
+import AttendanceEmptyState from '../features/attendance/components/AttendanceEmptyState';
+import AttendanceErrorState from '../features/attendance/components/AttendanceErrorState';
+import AttendanceFilters from '../features/attendance/components/AttendanceFilters';
+import AttendanceHistoryTable from '../features/attendance/components/AttendanceHistoryTable';
+import AttendanceStatsCards from '../features/attendance/components/AttendanceStatsCards';
+import AttendanceStatusSummary from '../features/attendance/components/AttendanceStatusSummary';
+import useAttendanceActions from '../features/attendance/hooks/useAttendanceActions';
+import useAttendanceCalendar from '../features/attendance/hooks/useAttendanceCalendar';
+import useAttendanceFilters from '../features/attendance/hooks/useAttendanceFilters';
+import useAttendanceHistory from '../features/attendance/hooks/useAttendanceHistory';
+import useAttendanceSummary from '../features/attendance/hooks/useAttendanceSummary';
 
 export default function Attendance({
   isNode,
   nodeApi,
-  leaves,
-  runAction,
-  submittingKey,
-  payrollChartData,
   localEmployees = [],
 }) {
-  /* ── Bước 1: Check-in / Check-out ── */
-  const [ciForm, setCiForm] = useState({ maNhanVien: '', ngay: today(), gio: '08:00:00' });
-  const [coForm, setCoForm] = useState({ maNhanVien: '', ngay: today(), gio: '17:00:00' });
-  const [ciError, setCiError] = useState('');
-  const [coError, setCoError] = useState('');
-  const [ciResult, setCiResult] = useState(null);
-  const [coResult, setCoResult] = useState(null);
-
-  function handleCheckIn() {
-    const e = validateMaNV(ciForm.maNhanVien) || (!ciForm.ngay ? 'Ngày không được để trống.' : '') || validateTime(ciForm.gio);
-    if (e) { setCiError(e); return; }
-    setCiError(''); setCiResult(null);
-    runAction('checkin',
-      () => nodeApi.checkIn({ maNhanVien: ciForm.maNhanVien.trim(), ngay: ciForm.ngay, gioVao: ensureSeconds(ciForm.gio) + ' 1/1/1970' }),
-      (res) => setCiResult(res)
-    );
-  }
-
-  function handleCheckOut() {
-    const e = validateMaNV(coForm.maNhanVien) || (!coForm.ngay ? 'Ngày không được để trống.' : '') || validateTime(coForm.gio);
-    if (e) { setCoError(e); return; }
-    setCoError(''); setCoResult(null);
-    runAction('checkout',
-      () => nodeApi.checkOut({ maNhanVien: coForm.maNhanVien.trim(), ngay: coForm.ngay, gioRa: ensureSeconds(coForm.gio) + ' 1/1/1970' }),
-      (res) => setCoResult(res)
-    );
-  }
-
-  /* ── Bước 3: Nghỉ phép ── */
-  const [leaveForm, setLeaveForm] = useState({ maNhanVien: '', tuNgay: today(), denNgay: today(), lyDo: '' });
+  const { draftFilters, appliedFilters, canQueryHistory, updateFilter, applyFilters, resetFilters } = useAttendanceFilters();
+  const [reloadKey, setReloadKey] = useState(0);
+  const [leaves, setLeaves] = useState([]);
   const [leaveError, setLeaveError] = useState('');
-  const [leaveCreated, setLeaveCreated] = useState(null);
-  const [approvalForm, setApprovalForm] = useState({ maNghiPhep: '', trangThai: 'DA_DUYET' });
-  const [approvalError, setApprovalError] = useState('');
 
-  function handleCreateLeave() {
-    const e = validateMaNV(leaveForm.maNhanVien);
-    if (e) { setLeaveError(e); return; }
-    if (!leaveForm.lyDo?.trim()) { setLeaveError('Lý do không được để trống.'); return; }
-    if (leaveForm.tuNgay > leaveForm.denNgay) { setLeaveError('Từ ngày phải ≤ đến ngày.'); return; }
-    setLeaveError(''); setLeaveCreated(null);
-    runAction('leave-request', () => nodeApi.createLeave(leaveForm), (res) => {
-      setLeaveCreated(res);
-      setApprovalForm((p) => ({ ...p, maNghiPhep: String(res?.maNghiPhep || '') }));
-    });
-  }
-
-  function handleApproveLeave() {
-    const id = approvalForm.maNghiPhep?.trim();
-    if (!id || isNaN(Number(id)) || Number(id) <= 0) {
-      setApprovalError('Mã nghỉ phép phải là số nguyên dương.'); return;
-    }
-    setApprovalError('');
-    runAction('leave-approval', () => nodeApi.approveLeave(id, { trangThai: approvalForm.trangThai }));
-  }
-
-  /* ── Bước 4: Tính lương ── */
-  const [salaryForm, setSalaryForm] = useState({
-    maNhanVien: '',
-    thang: new Date().getMonth() + 1,
-    nam: new Date().getFullYear(),
-    phuCap: '',
-    thuong: '',
-    khauTru: '',
+  const actions = useAttendanceActions({
+    nodeApi,
+    onSuccess: () => setReloadKey((previous) => previous + 1),
   });
-  const [salaryError, setSalaryError] = useState('');
-  const [salaryResult, setSalaryResult] = useState(null);
-  const pendingLeaveCount = leaves.filter(l => l.TrangThai === 'CHO_DUYET').length;
-  const payrollTotal = payrollChartData.reduce((acc, curr) => acc + (curr.total || 0), 0);
 
-  function handleGenerateSalary() {
-    const e = validateMaNV(salaryForm.maNhanVien);
-    if (e) { setSalaryError(e); return; }
-    const thang = Number(salaryForm.thang);
-    const nam = Number(salaryForm.nam);
-    if (!thang || thang < 1 || thang > 12) { setSalaryError('Tháng phải từ 1 đến 12.'); return; }
-    if (!nam || nam < 2000 || nam > 2100) { setSalaryError('Năm không hợp lệ.'); return; }
-    setSalaryError(''); setSalaryResult(null);
-    runAction('salary', () => nodeApi.generateSalary({
-      maNhanVien: salaryForm.maNhanVien.trim(),
-      thang,
-      nam,
-      phuCap: salaryForm.phuCap ? Number(salaryForm.phuCap) : 0,
-      thuong: salaryForm.thuong ? Number(salaryForm.thuong) : 0,
-      khauTru: salaryForm.khauTru ? Number(salaryForm.khauTru) : 0,
-    }), (res) => setSalaryResult(res));
+  const history = useAttendanceHistory({
+    nodeApi,
+    filters: appliedFilters,
+    reloadKey,
+  });
+
+  useEffect(() => {
+    if (!isNode || !nodeApi || !appliedFilters.employeeId) {
+      setLeaves([]);
+      setLeaveError('');
+      return;
+    }
+
+    let active = true;
+    setLeaveError('');
+
+    nodeApi
+      .listLeaves({ maNhanVien: appliedFilters.employeeId })
+      .then((result) => {
+        if (active) setLeaves(result || []);
+      })
+      .catch((error) => {
+        if (active) {
+          setLeaves([]);
+          setLeaveError(error.message || 'Khong tai duoc danh sach nghi phep.');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isNode, nodeApi, appliedFilters.employeeId, reloadKey]);
+
+  const summary = useAttendanceSummary({
+    rows: history.rows,
+    leaves,
+    range: history.range,
+    employeeId: appliedFilters.employeeId,
+  });
+
+  const calendarCells = useAttendanceCalendar({
+    filters: appliedFilters,
+    rows: history.rows,
+    leaveDates: summary.leaveDates,
+  });
+
+  if (!isNode) {
+    return (
+      <>
+        <SectionHeader
+          eyebrow="Attendance"
+          title="Cham cong"
+          description="Module nay chi hoat dong trong profile chi nhanh va bam sat flow attendance cua backend node."
+        />
+        <Panel title="Can profile node" subtitle="Attendance la endpoint cua node.">
+          <p className="text-sm text-[var(--hr-muted)]">Dang nhap moi truong chi nhanh de su dung module cham cong.</p>
+        </Panel>
+      </>
+    );
   }
 
   return (
     <>
-      <SectionHeader 
-        eyebrow="Attendance" 
-        title="Chấm công, nghỉ phép, tính lương" 
-        description="Toàn bộ thao tác nghiệp vụ node được gom vào một khu giao diện để nhập nhanh." 
+      <SectionHeader
+        eyebrow="Attendance"
+        title="Cham cong"
+        description="Module attendance da duoc tach rieng theo 3 flow backend: check-in, check-out va tra cuu lich su theo nhan vien + khoang ngay."
       />
 
-      <PermissionGuard
-        hasPermission={isNode}
-        title="Không dùng profile node"
-        subtitle="Trang này cần đăng nhập profile chi nhánh để thao tác chấm công và tính lương."
-        description="Module này chỉ khả dụng cho HR manager hoặc Admin tại chi nhánh."
-      >
-        <ResponsiveGrid>
-          <AttendanceWorkdayPanel
-            employees={localEmployees}
-            checkIn={{
-              error: ciError,
-              result: ciResult,
-              form: ciForm,
-              setForm: setCiForm,
-              submitting: submittingKey === 'checkin',
-              onSubmit: handleCheckIn,
-            }}
-            checkOut={{
-              error: coError,
-              result: coResult,
-              form: coForm,
-              setForm: setCoForm,
-              submitting: submittingKey === 'checkout',
-              onSubmit: handleCheckOut,
-            }}
-          />
-
-          <LeaveManagementPanel
-            employees={localEmployees}
-            leaves={leaves}
-            request={{
-              error: leaveError,
-              created: leaveCreated,
-              form: leaveForm,
-              setForm: setLeaveForm,
-              submitting: submittingKey === 'leave-request',
-              onSubmit: handleCreateLeave,
-            }}
-            approval={{
-              error: approvalError,
-              form: approvalForm,
-              setForm: setApprovalForm,
-              submitting: submittingKey === 'leave-approval',
-              onSubmit: handleApproveLeave,
-            }}
-          />
-        </ResponsiveGrid>
-
-        <PayrollOverviewPanel
+      <div className="space-y-6">
+        <AttendanceFilters
           employees={localEmployees}
-          payrollChartData={payrollChartData}
-          salary={{
-            error: salaryError,
-            result: salaryResult,
-            form: salaryForm,
-            setForm: setSalaryForm,
-            submitting: submittingKey === 'salary',
-            onSubmit: handleGenerateSalary,
-          }}
+          filters={draftFilters}
+          updateFilter={updateFilter}
+          applyFilters={applyFilters}
+          resetFilters={resetFilters}
         />
 
-        <AttendanceSummaryCards
-          employeeCount={localEmployees.length}
-          pendingLeaveCount={pendingLeaveCount}
-          payrollTotal={payrollTotal}
-        />
-      </PermissionGuard>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <AttendanceCheckForm
+            type="checkin"
+            title="Cham cong vao"
+            subtitle="POST /node/attendance/check-in"
+            employees={localEmployees}
+            form={actions.checkInForm}
+            setForm={actions.setCheckInForm}
+            error={actions.checkInError}
+            result={actions.checkInResult}
+            loading={actions.submittingKey === 'checkin'}
+            onSubmit={actions.submitIn}
+          />
+
+          <AttendanceCheckForm
+            type="checkout"
+            title="Cham cong ra"
+            subtitle="POST /node/attendance/check-out"
+            employees={localEmployees}
+            form={actions.checkOutForm}
+            setForm={actions.setCheckOutForm}
+            error={actions.checkOutError}
+            result={actions.checkOutResult}
+            loading={actions.submittingKey === 'checkout'}
+            onSubmit={actions.submitOut}
+          />
+        </div>
+
+        {actions.retryableAction ? (
+          <AttendanceErrorState
+            message="Phat hien loi timeout/network khi submit. Ban co the thu lai thao tac vua roi."
+            onRetry={actions.retryableAction}
+            retryLabel="Thu lai thao tac"
+          />
+        ) : null}
+
+        <AttendanceStatsCards present={summary.present} late={summary.late} leave={summary.leave} />
+
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-6">
+            <Panel title="Lich su cham cong" subtitle="GET /node/attendance/:maNhanVien?tuNgay&denNgay">
+              {!appliedFilters.employeeId ? (
+                <AttendanceEmptyState
+                  title="Chon nhan vien de xem lich su"
+                  description="Backend hien tai yeu cau ma nhan vien trong endpoint attendance history."
+                />
+              ) : history.error ? (
+                <AttendanceErrorState message={history.error} onRetry={history.retry} />
+              ) : history.loading ? (
+                <p className="text-sm text-[var(--hr-muted)]">Dang tai lich su cham cong...</p>
+              ) : (
+                <AttendanceHistoryTable rows={history.rows} />
+              )}
+            </Panel>
+
+            {leaveError ? <AttendanceErrorState message={leaveError} /> : null}
+
+            <AttendanceStatusSummary latest={summary.latest} />
+          </div>
+
+          <AttendanceCalendar cells={calendarCells} />
+        </div>
+
+        {!canQueryHistory ? (
+          <AttendanceEmptyState
+            title="Bo loc chua du thong tin"
+            description="Hay chon nhan vien va ngay hoac thang de frontend sinh tuNgay-denNgay dung voi flow backend."
+          />
+        ) : null}
+      </div>
     </>
   );
 }
