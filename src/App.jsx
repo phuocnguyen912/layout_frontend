@@ -237,9 +237,18 @@ export default function App() {
                 path="/attendance"
                 element={isNode ? <Attendance {...sharedProps} {...apiProps} leaves={leaves} localEmployees={hydrate(localEmps)} payrollChartData={payrollChart} /> : <Navigate to="/" replace />}
               />
-              <Route path="/positions" element={<Positions />} />
-              <Route path="/contracts" element={<Contracts />} />
-              <Route path="/salary" element={<Salary />} />
+              <Route
+                path="/positions"
+                element={<Positions {...sharedProps} {...apiProps} />}
+              />
+              <Route
+                path="/contracts"
+                element={<Contracts {...sharedProps} {...apiProps} />}
+              />
+              <Route
+                path="/salary"
+                element={<Salary {...sharedProps} {...apiProps} setNodeData={setNode} localEmployees={hydrate(localEmps)} payrollChartData={payrollChart} />}
+              />
               <Route
                 path="/sync"
                 element={<Sync {...sharedProps} {...apiProps} setNodeData={setNode} syncStatus={syncStatus} />}
