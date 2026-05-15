@@ -1,231 +1,132 @@
-/**
- * Utility functions cho chấm công, nghỉ phép, tính lương
- */
+function normalizeDateInput(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  return date.toISOString().slice(0, 10);
+}
 
-// ============= CHẤM CÔNG (ATTENDANCE) =============
+function employeeNameMap(employees) {
+  return new Map((employees || []).map((employee) => [employee.MaNhanVien, employee.HoTen || employee.MaNhanVien]));
+}
 
-/**
- * Format trạng thái chấm công
- */
 export function formatAttendanceStatus(status) {
   const statusMap = {
-    'ON_TIME': 'Đúng giờ',
-    'LATE': 'Đi muộn',
-    'EARLY_LEAVE': 'Đi sớm',
-    'INCOMPLETE': 'Chưa chấm công ra',
-    'Du gio': 'Đủ giờ',
+    ON_TIME: 'Dung gio',
+    LATE: 'Di tre',
+    EARLY_LEAVE: 'Di som',
+    INCOMPLETE: 'Chua check-out',
+    'Du gio': 'Du gio',
+    PRESENT: 'Co mat',
+    LEAVE: 'Nghi phep',
   };
-  return statusMap[status] || status;
+
+  return statusMap[status] || status || 'Khong ro';
 }
 
-/**
- * Tính số giờ làm việc
- */
-export function calculateWorkingHours(gioVao, gioRa) {
-  if (!gioVao || !gioRa) return 0;
-  
-  const [hoVao, phutVao] = gioVao.split(':').map(Number);
-  const [hoRa, phutRa] = gioRa.split(':').map(Number);
-  
-  const thoiGianVao = hoVao * 60 + phutVao;
-  const thoiGianRa = hoRa * 60 + phutRa;
-  
-  const soPhut = thoiGianRa - thoiGianVao;
-  return Math.round(soPhut / 60 * 10) / 10; // Làm tròn đến 0.1 giờ
+export function buildAttendanceRows({ employees = [], attendance = [], leaves = [], latestEvents = [], filters = {} }) {
+  const names = employeeNameMap(employees);
+  const leaveByEmployee = new Map();
+
+  for (const leave of leaves || []) {
+    const key = leave.MaNhanVien;
+    if (!leaveByEmployee.has(key)) {
+      leaveByEmployee.set(key, []);
+    }
+    leaveByEmployee.get(key).push(leave);
+  }
+
+  const monthlyRows = (attendance || []).map((item) => {
+    const employeeLeaves = leaveByEmployee.get(item.MaNhanVien) || [];
+    const approvedLeaveCount = employeeLeaves.filter((leave) => leave.TrangThai === 'DA_DUYET').length;
+    const latestEvent = [...latestEvents].reverse().find((event) => event.maNhanVien === item.MaNhanVien);
+    const latestStatus = latestEvent?.trangThai || (approvedLeaveCount > 0 ? 'LEAVE' : 'PRESENT');
+    return {
+      id: `${item.MaNhanVien}-${filters.nam || 'all'}-${filters.thang || 'all'}`,
+      MaNhanVien: item.MaNhanVien,
+      HoTen: names.get(item.MaNhanVien) || item.MaNhanVien,
+      SoNgayChamCong: Number(item.SoNgayChamCong || 0),
+      SoDonNghi: approvedLeaveCount,
+      TrangThaiGanNhat: latestStatus,
+      TrangThaiLabel: formatAttendanceStatus(latestStatus),
+      Ky: `${filters.thang || ''}/${filters.nam || ''}`.replace(/^\/|\/$/g, ''),
+    };
+  });
+
+  const employeeFilter = filters.employeeId ? String(filters.employeeId).trim().toUpperCase() : '';
+  const keywordFilter = filters.keyword ? String(filters.keyword).trim().toLowerCase() : '';
+
+  return monthlyRows
+    .filter((row) => {
+      if (employeeFilter && String(row.MaNhanVien).toUpperCase() !== employeeFilter) return false;
+      if (keywordFilter) {
+        const haystack = JSON.stringify(row).toLowerCase();
+        if (!haystack.includes(keywordFilter)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => a.MaNhanVien.localeCompare(b.MaNhanVien));
 }
 
-/**
- * Tính số ngày làm việc trong tháng từ danh sách chấm công
- */
-export function calculateWorkingDaysInMonth(attendanceList) {
-  if (!attendanceList || attendanceList.length === 0) return 0;
-  
-  const uniqueDates = new Set(attendanceList.map(a => a.Ngay));
-  return uniqueDates.size;
+export function filterAttendanceRows(rows, filters = {}) {
+  const normalizedDate = normalizeDateInput(filters.date);
+  if (!normalizedDate) return rows;
+
+  return rows.filter((row) => row.Ngay === normalizedDate || row.NgayCheckIn === normalizedDate || row.NgayCheckOut === normalizedDate);
 }
 
-/**
- * Lọc chấm công theo trạng thái
- */
-export function filterAttendanceByStatus(attendanceList, status) {
-  if (!status) return attendanceList;
-  return attendanceList.filter(a => a.TrangThai === status);
-}
+export function deriveAttendanceStats({ rows = [], leaves = [], latestEvents = [] }) {
+  const present = rows.reduce((sum, row) => sum + Number(row.SoNgayChamCong || 0), 0);
+  const leave = (leaves || []).filter((item) => item.TrangThai === 'DA_DUYET').length;
+  const late = (latestEvents || []).filter((item) => item.trangThai === 'LATE').length;
 
-// ============= NGHỈ PHÉP (LEAVE) =============
-
-/**
- * Format trạng thái đơn nghỉ
- */
-export function formatLeaveStatus(status) {
-  const statusMap = {
-    'CHO_DUYET': 'Chờ duyệt',
-    'DA_DUYET': 'Đã duyệt',
-    'TU_CHOI': 'Từ chối',
-    'DA_HUY': 'Đã hủy',
+  return {
+    present,
+    leave,
+    late,
   };
-  return statusMap[status] || status;
 }
 
-/**
- * Tính số ngày nghỉ thực tế (loại trừ thứ 7, CN)
- */
-export function calculateLeaveDays(tuNgay, denNgay) {
-  const startDate = new Date(tuNgay);
-  const endDate = new Date(denNgay);
-  let count = 0;
+export function buildAttendanceCalendar({ rows = [], leaves = [], latestEvents = [], filters = {} }) {
+  const month = Number(filters.thang || new Date().getMonth() + 1);
+  const year = Number(filters.nam || new Date().getFullYear());
+  const calendarMap = {};
 
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const day = d.getDay();
-    // 0 = Sunday, 6 = Saturday
-    if (day !== 0 && day !== 6) {
-      count++;
+  rows.forEach((row, index) => {
+    const day = String((index % 28) + 1).padStart(2, '0');
+    const key = `${year}-${String(month).padStart(2, '0')}-${day}`;
+    calendarMap[key] = row.TrangThaiGanNhat || 'PRESENT';
+  });
+
+  (leaves || []).forEach((leave) => {
+    if (leave.TrangThai !== 'DA_DUYET') return;
+    const key = normalizeDateInput(leave.TuNgay);
+    if (key) {
+      calendarMap[key] = 'LEAVE';
     }
-  }
+  });
 
-  return count;
-}
-
-/**
- * Validate đơn nghỉ phép
- */
-export function validateLeaveForm(formData) {
-  const errors = {};
-
-  if (!formData.maNhanVien) {
-    errors.maNhanVien = 'Vui lòng nhập mã nhân viên';
-  }
-
-  if (!formData.tuNgay) {
-    errors.tuNgay = 'Vui lòng chọn từ ngày';
-  }
-
-  if (!formData.denNgay) {
-    errors.denNgay = 'Vui lòng chọn đến ngày';
-  }
-
-  if (formData.tuNgay && formData.denNgay) {
-    const startDate = new Date(formData.tuNgay);
-    const endDate = new Date(formData.denNgay);
-    
-    if (startDate > endDate) {
-      errors.denNgay = 'Đến ngày phải >= từ ngày';
+  (latestEvents || []).forEach((event) => {
+    const key = normalizeDateInput(event.ngay);
+    if (key) {
+      calendarMap[key] = event.trangThai || calendarMap[key] || 'PRESENT';
     }
-  }
+  });
 
-  return errors;
+  return calendarMap;
 }
 
-/**
- * Lọc đơn nghỉ theo trạng thái
- */
-export function filterLeaveByStatus(leaveList, status) {
-  if (!status) return leaveList;
-  return leaveList.filter(l => l.TrangThai === status);
+export function createAttendanceEvent(type, payload) {
+  return {
+    type,
+    maNhanVien: payload?.maNhanVien || '',
+    ngay: payload?.ngay || '',
+    gio: payload?.gioVao || payload?.gioRa || '',
+    trangThai: payload?.trangThai || (type === 'checkout' ? 'CHECKED_OUT' : 'ON_TIME'),
+    timestamp: Date.now(),
+  };
 }
 
-/**
- * Lọc đơn nghỉ theo nhân viên
- */
-export function filterLeaveByEmployee(leaveList, maNhanVien) {
-  if (!maNhanVien) return leaveList;
-  return leaveList.filter(l => l.MaNhanVien === maNhanVien);
-}
-
-// ============= TÍNH LƯƠNG (SALARY) =============
-
-/**
- * Format tiền tệ VND
- */
-export function formatSalaryAmount(amount) {
-  if (typeof amount !== 'number') return '0 đ';
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-/**
- * Tính lương thực lĩnh
- * Công thức: (LuongCoBan * SoNgayLam / 22) + PhuCap + Thuong - KhauTru
- */
-export function calculateNetSalary(luongCoBan, soNgayLam, phuCap = 0, thuong = 0, khauTru = 0) {
-  const luongTheoNgay = (luongCoBan * soNgayLam) / 22;
-  return luongTheoNgay + phuCap + thuong - khauTru;
-}
-
-/**
- * Validate form tính lương
- */
-export function validateSalaryForm(formData) {
-  const errors = {};
-
-  if (!formData.maNhanVien) {
-    errors.maNhanVien = 'Vui lòng nhập mã nhân viên';
-  }
-
-  if (!formData.thang || formData.thang < 1 || formData.thang > 12) {
-    errors.thang = 'Tháng phải từ 1 đến 12';
-  }
-
-  if (!formData.nam || formData.nam < 2020) {
-    errors.nam = 'Năm không hợp lệ';
-  }
-
-  return errors;
-}
-
-/**
- * Nhóm danh sách lương theo nhân viên
- */
-export function groupSalaryByEmployee(salaryList) {
-  return salaryList.reduce((acc, salary) => {
-    if (!acc[salary.MaNhanVien]) {
-      acc[salary.MaNhanVien] = {
-        maNhanVien: salary.MaNhanVien,
-        hoTen: salary.HoTen,
-        salaries: [],
-      };
-    }
-    acc[salary.MaNhanVien].salaries.push(salary);
-    return acc;
-  }, {});
-}
-
-/**
- * Tính tổng lương theo kỳ
- */
-export function calculateTotalSalaryByPeriod(salaryList) {
-  return salaryList.reduce((total, salary) => {
-    return total + (salary.TongLuong || 0);
-  }, 0);
-}
-
-/**
- * Tính lương trung bình
- */
-export function calculateAverageSalary(salaryList) {
-  if (salaryList.length === 0) return 0;
-  const total = calculateTotalSalaryByPeriod(salaryList);
-  return total / salaryList.length;
-}
-
-/**
- * Lọc lương theo nhân viên
- */
-export function filterSalaryByEmployee(salaryList, maNhanVien) {
-  if (!maNhanVien) return salaryList;
-  return salaryList.filter(s => s.MaNhanVien === maNhanVien);
-}
-
-/**
- * Chuẩn bị dữ liệu cho biểu đồ lương
- */
-export function prepareSalaryChartData(salaryList) {
-  return salaryList.map(s => ({
-    name: s.HoTen || s.MaNhanVien,
-    salary: s.TongLuong || 0,
-  }));
+export function getRetryableMessage(message) {
+  const lowered = String(message || '').toLowerCase();
+  return lowered.includes('timeout') || lowered.includes('network') || lowered.includes('failed');
 }
