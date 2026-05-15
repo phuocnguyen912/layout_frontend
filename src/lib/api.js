@@ -138,7 +138,13 @@ export function createPublisherApi(profileKey, token) {
     createContractType: (body) =>
       request(profileKey, '/publisher/contract-types', { method: 'POST', token, body }),
     createAccount: (body) => request(profileKey, '/publisher/accounts', { method: 'POST', token, body }),
-    createEmployee: (body) => request(profileKey, '/node/employees', { method: 'POST', token, body }),
+    createEmployee: (body) => request(profileKey, '/publisher/employees', { method: 'POST', token, body }),
+    updateEmployee: (maNhanVien, body) =>
+      request(profileKey, `/publisher/employees/${encodeURIComponent(maNhanVien)}`, { method: 'PUT', token, body }),
+    deleteEmployee: (maNhanVien) =>
+      request(profileKey, `/publisher/employees/${encodeURIComponent(maNhanVien)}`, { method: 'DELETE', token }),
+    reactivateEmployee: (maNhanVien) =>
+      request(profileKey, `/publisher/employees/${encodeURIComponent(maNhanVien)}/reactivate`, { method: 'PATCH', token }),
   };
 }
 

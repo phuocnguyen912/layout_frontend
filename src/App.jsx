@@ -14,7 +14,7 @@ import Salary from './pages/Salary';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import DashboardStats from './components/layout/DashboardStats';
-import { SEED_EMPLOYEES } from './data/employees';
+import { SEED_EMPLOYEES, SEED_POSITIONS, SEED_DEPARTMENTS } from './data/employees';
 
 export default function App() {
   const location = useLocation();
@@ -54,13 +54,17 @@ export default function App() {
         setPub({ summary, sync, employees, branches, positions, contractTypes });
       } else {
         const a = createNodeApi(s.profileKey, s.token);
+        const pApi = createPublisherApi('publisher', s.token);
         const d = new Date();
-        const [report, health] = await Promise.all([
+        const [report, health, globalEmps] = await Promise.all([
           a.localReport({ keyword: '', thang: d.getMonth() + 1, nam: d.getFullYear() }),
           fetchHealth(s.profileKey).catch(() => null),
+          pApi.listEmployees().catch(() => []),
         ]);
         setNode(p => ({ ...p, report, health }));
         setLocalEmps(report?.employees || []);
+        // Update global employees in pub state so Employees page gets existingIds correctly
+        setPub(prev => ({ ...prev, employees: globalEmps }));
         setSyncStatus(null);
       }
     } catch (e) {
@@ -147,6 +151,9 @@ export default function App() {
 
     const source = { ...seedEmp, ...pubEmp, ...meta };
 
+    const dept = SEED_DEPARTMENTS.find(d => d.MaPhongBan === (item.MaPhongBan || source.MaPhongBan));
+    const pos = SEED_POSITIONS.find(p => p.MaChucVu === (item.MaChucVu || source.MaChucVu));
+
     return {
       ...item,
       SDT: item.SDT || source.SDT || source.sdt,
@@ -155,11 +162,11 @@ export default function App() {
       NgayVaoLam: item.NgayVaoLam || source.NgayVaoLam || source.ngayVaoLam,
       MaChiNhanh: item.MaChiNhanh || source.MaChiNhanh || source.maChiNhanh,
       TenChiNhanh: item.TenChiNhanh || source.TenChiNhanh || source.tenChiNhanh,
-      TenPhongBan: item.TenPhongBan || source.TenPhongBan || source.tenPhongBan,
-      TenChucVu: item.TenChucVu || source.TenChucVu || source.tenChucVu,
+      TenPhongBan: dept?.TenPhongBan || item.TenPhongBan || source.TenPhongBan || source.tenPhongBan,
+      TenChucVu: pos?.TenChucVu || item.TenChucVu || source.TenChucVu || source.tenChucVu,
       MaPhongBan: item.MaPhongBan || source.MaPhongBan || source.maPhongBan,
       MaChucVu: item.MaChucVu || source.MaChucVu || source.maChucVu,
-      TrangThai: item.TrangThai || source.TrangThai || source.trangThai || 'Hoat dong',
+      TrangThai: item.TrangThai || source.TrangThai || source.trangThai || 'Đang làm việc',
     };
   });
 

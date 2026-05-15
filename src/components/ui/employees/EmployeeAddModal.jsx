@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { UserPlus } from 'lucide-react';
-import Field from '../../components/ui/Field';
-import Input from '../../components/ui/Input';
-import Select from '../../components/ui/Select';
-import Button from '../../components/ui/Button';
-import { SEED_POSITIONS, SEED_DEPARTMENTS } from '../../data/employees';
+import Field from '../Field';
+import Input from '../Input';
+import Select from '../Select';
+import Button from '../Button';
+import Modal from '../Modal';
+import Alert from '../Alert';
+import { SEED_POSITIONS, SEED_DEPARTMENTS } from '../../../data/employees';
 
 const defaultEmployeeForm = {
   maNhanVien: '',
@@ -28,8 +30,6 @@ export default function EmployeeAddModal({
   branches = [],
   isNode = false,
   existingIds = [],
-  departments = [],
-  positions = [],
 }) {
   const [form, setForm] = useState(defaultEmployeeForm);
   const [error, setError] = useState('');
@@ -103,25 +103,34 @@ export default function EmployeeAddModal({
   };
 
   const handleChange = (patch) => {
-    setForm((prev) => ({ ...prev, ...patch }));
+    setForm((prev) => {
+      const next = { ...prev, ...patch };
+      
+      // Auto-assign branch when department is selected
+      if (patch.maPhongBan) {
+        const dept = SEED_DEPARTMENTS.find(d => d.MaPhongBan === patch.maPhongBan);
+        if (dept && dept.MaChiNhanh) {
+          next.maChiNhanh = dept.MaChiNhanh;
+        }
+      }
+
+      return next;
+    });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1712]/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[24px] bg-white p-6 shadow-2xl">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#9a4f35]">Thêm nhân viên</p>
-            <h3 className="mt-1 text-xl font-semibold text-[var(--hr-ink)]">Tạo hồ sơ nhân sự mới</h3>
-          </div>
-          <button type="button" className="flex-shrink-0 text-sm font-medium text-[var(--hr-muted)] hover:text-[var(--hr-ink)] transition" onClick={onClose}>
-            Đóng
-          </button>
-        </div>
-
-        {error ? <div className="mb-4 rounded-xl bg-[#f3d9d2] px-3 py-2 text-sm text-[#8a3828]">{error}</div> : null}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Tạo hồ sơ nhân sự mới"
+      maxWidth="max-w-3xl"
+      padding="p-6"
+      rounded="rounded-[24px]"
+    >
+      {error && <Alert type="error" message={error} className="mb-4" />}
 
         <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
+          {/* Thông tin định danh */}
           <Field label="Mã nhân viên">
             <Input
               value={form.maNhanVien}
@@ -138,6 +147,73 @@ export default function EmployeeAddModal({
               required
             />
           </Field>
+
+          {/* Chi nhánh & Phòng ban (Quan trọng nhất cho Publisher) */}
+          <Field label="Chi nhánh">
+            {isNode ? (
+              <Input
+                value={form.maChiNhanh}
+                readOnly
+                className="bg-gray-50 opacity-70"
+              />
+            ) : (
+              <Select
+                value={form.maChiNhanh}
+                onChange={(e) => handleChange({ maChiNhanh: e.target.value })}
+                required
+              >
+                <option value="">-- Chọn chi nhánh --</option>
+                {branches.map((b) => (
+                  <option key={b.MaChiNhanh} value={b.MaChiNhanh}>
+                    {b.TenChiNhanh} ({b.MaChiNhanh})
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+
+          <Field label="Phòng ban">
+            <Select
+              value={form.maPhongBan}
+              onChange={(e) => handleChange({ maPhongBan: e.target.value })}
+              required
+            >
+              <option value="">-- Chọn phòng ban --</option>
+              {SEED_DEPARTMENTS
+                .filter(d => !form.maChiNhanh || d.MaChiNhanh === form.maChiNhanh)
+                .map((dept) => (
+                  <option key={dept.MaPhongBan} value={dept.MaPhongBan}>
+                    {dept.TenPhongBan} ({dept.MaPhongBan})
+                  </option>
+                ))
+              }
+            </Select>
+          </Field>
+
+          <Field label="Chức vụ">
+            <Select
+              value={form.maChucVu}
+              onChange={(e) => handleChange({ maChucVu: e.target.value })}
+              required
+            >
+              <option value="">-- Chọn chức vụ --</option>
+              {SEED_POSITIONS.map((pos) => (
+                <option key={pos.MaChucVu} value={pos.MaChucVu}>
+                  {pos.TenChucVu} ({pos.MaChucVu})
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="Ngày vào làm">
+            <Input
+              type="date"
+              value={form.ngayVaoLam}
+              onChange={(e) => handleChange({ ngayVaoLam: e.target.value })}
+            />
+          </Field>
+
+          {/* Thông tin cá nhân */}
           <Field label="Ngày sinh">
             <Input
               type="date"
@@ -170,81 +246,6 @@ export default function EmployeeAddModal({
               placeholder="example@company.com"
             />
           </Field>
-          <Field label="Phòng ban">
-            <Select
-              value={form.maPhongBan}
-              onChange={(e) => handleChange({ maPhongBan: e.target.value })}
-              required
-            >
-              <option value="">-- Chọn phòng ban --</option>
-              {departments && departments.length > 0 ? (
-                departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name} ({dept.id})
-                  </option>
-                ))
-              ) : (
-                SEED_DEPARTMENTS
-                  .filter(d => !form.maChiNhanh || d.MaChiNhanh === form.maChiNhanh)
-                  .map((dept) => (
-                    <option key={dept.MaPhongBan} value={dept.MaPhongBan}>
-                      {dept.TenPhongBan} ({dept.MaPhongBan})
-                    </option>
-                  ))
-              )}
-            </Select>
-          </Field>
-          <Field label="Chức vụ">
-            <Select
-              value={form.maChucVu}
-              onChange={(e) => handleChange({ maChucVu: e.target.value })}
-              required
-            >
-              <option value="">-- Chọn chức vụ --</option>
-              {positions && positions.length > 0 ? (
-                positions.map((pos) => (
-                  <option key={pos.id} value={pos.id}>
-                    {pos.name} ({pos.id})
-                  </option>
-                ))
-              ) : (
-                SEED_POSITIONS.map((pos) => (
-                  <option key={pos.MaChucVu} value={pos.MaChucVu}>
-                    {pos.TenChucVu} ({pos.MaChucVu})
-                  </option>
-                ))
-              )}
-            </Select>
-          </Field>
-          <Field label="Ngày vào làm">
-            <Input
-              type="date"
-              value={form.ngayVaoLam}
-              onChange={(e) => handleChange({ ngayVaoLam: e.target.value })}
-            />
-          </Field>
-          <Field label="Chi nhánh">
-            {isNode ? (
-              <Input
-                value={form.maChiNhanh}
-                readOnly
-                className="bg-gray-50 opacity-70"
-              />
-            ) : (
-              <Select
-                value={form.maChiNhanh}
-                onChange={(e) => handleChange({ maChiNhanh: e.target.value })}
-                required
-              >
-                <option value="">-- Chọn chi nhánh --</option>
-                {branches.map((b) => (
-                  <option key={b.MaChiNhanh} value={b.MaChiNhanh}>
-                    {b.TenChiNhanh} ({b.MaChiNhanh})
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
 
           <div className="md:col-span-2 flex items-center justify-end gap-3 mt-4">
             <Button type="button" variant="secondary" onClick={onClose}>
@@ -260,7 +261,6 @@ export default function EmployeeAddModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
