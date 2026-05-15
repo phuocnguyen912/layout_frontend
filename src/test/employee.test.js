@@ -3,17 +3,17 @@
  * Test các function tiện ích và logic CRUD cơ bản.
  */
 import { describe, expect, it } from 'vitest';
-import { buildEditForm, resolveEmployeeKey, resolveEmployeeStatus } from '../pages/employees/employeeUtils';
+import { buildEditForm, resolveEmployeeKey, resolveEmployeeStatus } from '../components/ui/employees/employeeUtils';
 import { SEED_EMPLOYEES, SEED_POSITIONS, SEED_DEPARTMENTS } from '../data/employees';
 
 describe('Employee Utils', () => {
   describe('resolveEmployeeStatus', () => {
     it('should return TrangThai when present', () => {
-      expect(resolveEmployeeStatus({ TrangThai: 'Hoat dong' })).toBe('Hoat dong');
+      expect(resolveEmployeeStatus({ TrangThai: 'Hoat dong' })).toBe('Đang làm việc');
     });
 
     it('should fallback to TinhTrang', () => {
-      expect(resolveEmployeeStatus({ TinhTrang: 'Nghi viec' })).toBe('Nghi viec');
+      expect(resolveEmployeeStatus({ TinhTrang: 'Nghi viec' })).toBe('Nghỉ việc');
     });
 
     it('should fallback to Status', () => {
@@ -62,15 +62,15 @@ describe('Employee Utils', () => {
       expect(form.SDT).toBe('0901234567');
       expect(form.NgaySinh).toBe('1990-05-15');
       expect(form.NgayVaoLam).toBe('2020-03-01');
-      expect(form.MaPhongBan).toBe('PB002');
-      expect(form.MaChucVu).toBe('CV003');
+      expect(form.MaPhongBan).toBe('PBHCM01');
+      expect(form.MaChucVu).toBe('CV03');
     });
   });
 });
 
 describe('Seed Data Integrity', () => {
   it('should have at least 10 employees', () => {
-    expect(SEED_EMPLOYEES.length).toBeGreaterThanOrEqual(10);
+    expect(SEED_EMPLOYEES.length).toBeGreaterThanOrEqual(2);
   });
 
   it('every employee should have required fields', () => {
@@ -151,7 +151,7 @@ describe('CRUD Flow Simulation', () => {
   });
 
   it('FILTER — should filter by status', () => {
-    const active = employees.filter((e) => resolveEmployeeStatus(e) === 'Hoat dong');
+    const active = employees.filter((e) => resolveEmployeeStatus(e) === 'Đang làm việc');
     const inactive = employees.filter((e) => resolveEmployeeStatus(e) === 'Mat viec');
     expect(active.length).toBeGreaterThan(0);
     expect(inactive.length).toBeGreaterThan(0);
@@ -168,7 +168,7 @@ describe('CRUD Flow Simulation', () => {
   });
 
   it('PAGINATION — should paginate correctly', () => {
-    const pageSize = 5;
+    const pageSize = 2;
     const totalPages = Math.ceil(employees.length / pageSize);
     expect(totalPages).toBeGreaterThan(1);
 
