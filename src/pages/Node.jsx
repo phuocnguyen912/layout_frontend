@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { UserPlus, FileText, RefreshCw } from 'lucide-react';
 import SectionHeader from '../components/ui/SectionHeader';
 import Panel from '../components/ui/Panel';
@@ -34,56 +34,38 @@ export default function Node({
   runAction,
   submittingKey,
   session,
-<<<<<<< HEAD
   saveEmpMeta,
-=======
-  publisherData,
   reportFilters,
   setReportFilters,
->>>>>>> master
 }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [contractForm, setContractForm] = useState(defaultContractForm);
-<<<<<<< HEAD
-  const [reportFilters, setReportFilters] = useState(defaultReportFilters);
   const [contractFormError, setContractFormError] = useState('');
   const branchCode = NODE_BRANCH_CODES[session?.profileKey] || '';
 
   const availableDepts = useMemo(() => {
     const map = new Map();
-    localEmployees.forEach(emp => {
+    localEmployees.forEach((emp) => {
       if (emp.MaPhongBan) map.set(emp.MaPhongBan, emp.TenPhongBan || emp.MaPhongBan);
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [localEmployees]);
-=======
-  const [employeeFormError, setEmployeeFormError] = useState('');
-  const [contractFormError, setContractFormError] = useState('');
-  const branchCode = NODE_BRANCH_CODES[session?.profileKey] || '';
-
-  // Logic lọc dữ liệu Chấm công và Lương theo từ khóa (Xử lý lỗi K25)
-  const filteredAttendance = (nodeData.report.attendance || []).filter((att) =>
-    localEmployees.some((emp) => emp.MaNhanVien === att.MaNhanVien)
-  );
-  const filteredPayroll = (nodeData.report.payroll || []).filter((pay) =>
-    localEmployees.some((emp) => emp.MaNhanVien === pay.MaNhanVien)
-  );
-
-  useEffect(() => {
-    if (!branchCode) return;
-    setEmployeeForm((previous) =>
-      previous.maChiNhanh === branchCode ? previous : { ...previous, maChiNhanh: branchCode },
-    );
-  }, [branchCode]);
->>>>>>> master
 
   const availablePositions = useMemo(() => {
     const map = new Map();
-    localEmployees.forEach(emp => {
+    localEmployees.forEach((emp) => {
       if (emp.MaChucVu) map.set(emp.MaChucVu, emp.TenChucVu || emp.MaChucVu);
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [localEmployees]);
+
+  const filteredAttendance = (nodeData?.report?.attendance || []).filter((att) =>
+    localEmployees.some((emp) => emp.MaNhanVien === att.MaNhanVien),
+  );
+
+  const filteredPayroll = (nodeData?.report?.payroll || []).filter((pay) =>
+    localEmployees.some((emp) => emp.MaNhanVien === pay.MaNhanVien),
+  );
 
   function validateContractForm(form) {
     if (!form.maHopDong?.trim()) return 'Mã hợp đồng không được để trống.';
@@ -104,11 +86,7 @@ export default function Node({
       />
 
       {!isNode ? (
-<<<<<<< HEAD
         <Panel title="Không dùng profile node" subtitle="Trang này cần đăng nhập profile chi nhánh HCM hoặc Hà Nội.">
-=======
-        <Panel title="Không dùng profile node">
->>>>>>> master
           <p className="text-sm text-[var(--hr-muted)]">
             Chuyển qua môi trường chi nhánh để tạo nhân viên, hợp đồng và xem báo cáo local.
           </p>
@@ -116,125 +94,15 @@ export default function Node({
       ) : (
         <>
           <div className="grid gap-6 xl:grid-cols-2">
-<<<<<<< HEAD
             <Panel title="Quản lý nhân viên" subtitle="Thao tác với hồ sơ nhân sự local.">
-              <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+              <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#ecd7cb] text-[#8a3828]">
                   <UserPlus className="h-8 w-8" />
                 </div>
                 <h4 className="text-lg font-semibold text-[var(--hr-ink)]">Thêm nhân viên mới</h4>
-                <p className="mt-2 mb-6 max-w-xs text-sm text-[var(--hr-muted)]">
+                <p className="mb-6 mt-2 max-w-xs text-sm text-[var(--hr-muted)]">
                   Khởi tạo hồ sơ nhân sự mới cho chi nhánh {branchCode}. Dữ liệu sẽ được lưu tại Node local trước khi đồng bộ.
                 </p>
-=======
-            <Panel title="Tạo nhân viên" >
-              {employeeFormError && (
-                <div className="mb-2 rounded-xl bg-[#f3d9d2] px-3 py-2 text-sm text-[#8a3828]">
-                  {employeeFormError}
-                </div>
-              )}
-              <form
-                className="grid gap-4 md:grid-cols-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const formWithBranch = { ...employeeForm, maChiNhanh: branchCode || employeeForm.maChiNhanh };
-                  const err = validateEmployeeForm(formWithBranch);
-                  if (err) { setEmployeeFormError(err); return; }
-                  setEmployeeFormError('');
-                  runAction('create-employee', () => nodeApi.createEmployee(formWithBranch), () =>
-                    setEmployeeForm({ ...defaultEmployeeForm, maChiNhanh: branchCode }),
-                  );
-                }}
-              >
-                <Field label="Mã nhân viên">
-                  <Input
-                    value={employeeForm.maNhanVien}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, maNhanVien: event.target.value })}
-                    required
-                  />
-                </Field>
-                <Field label="Họ tên">
-                  <Input
-                    value={employeeForm.hoTen}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, hoTen: event.target.value })}
-                    required
-                  />
-                </Field>
-                <Field label="Ngày sinh">
-                  <Input
-                    type="date"
-                    value={employeeForm.ngaySinh}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, ngaySinh: event.target.value })}
-                  />
-                </Field>
-                <Field label="Giới tính">
-                  <Select
-                    value={employeeForm.gioiTinh}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, gioiTinh: event.target.value })}
-                  >
-                    <option value="Nam">Nam</option>
-                    <option value="Nữ">Nữ</option>
-                    <option value="Khác">Khác</option>
-                  </Select>
-                </Field>
-                <Field label="SĐT">
-                  <Input
-                    value={employeeForm.sdt}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, sdt: event.target.value })}
-                  />
-                </Field>
-                <Field label="Email">
-                  <Input
-                    type="email"
-                    value={employeeForm.email}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, email: event.target.value })}
-                  />
-                </Field>
-                <Field label="Mã phòng ban">
-                  <Select
-                    value={employeeForm.maPhongBan}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, maPhongBan: event.target.value })}
-                    required
-                  >
-                    <option value="">-- Chọn phòng ban ({nodeData?.departments?.length||0}) --</option>
-                    {nodeData?.departments?.map(d => (
-                      <option key={d.MaPhongBan || d.maPhongBan} value={d.MaPhongBan || d.maPhongBan}>{d.TenPhongBan || d.tenPhongBan}</option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Mã chức vụ">
-                  <Select
-                    value={employeeForm.maChucVu}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, maChucVu: event.target.value })}
-                    required
-                  >
-                    <option value="">-- Chọn chức vụ ({nodeData?.positions?.length||0}) --</option>
-                    {nodeData?.positions?.map(p => (
-                      <option key={p.MaChucVu || p.maChucVu} value={p.MaChucVu || p.maChucVu}>{p.TenChucVu || p.tenChucVu}</option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Ngày vào làm">
-                  <Input
-                    type="date"
-                    value={employeeForm.ngayVaoLam}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, ngayVaoLam: event.target.value })}
-                  />
-                </Field>
-                <Field label="Mã chi nhánh">
-                  <Select
-                    value={employeeForm.maChiNhanh}
-                    onChange={(event) => setEmployeeForm({ ...employeeForm, maChiNhanh: event.target.value })}
-                    disabled={Boolean(branchCode)}
-                    required
-                  >
-                    <option value="">-- Chọn chi nhánh --</option>
-                    {nodeData?.branches?.map(b => (
-                      <option key={b.MaChiNhanh || b.maChiNhanh} value={b.MaChiNhanh || b.maChiNhanh}>{b.TenChiNhanh || b.tenChiNhanh}</option>
-                    ))}
-                  </Select>
-                </Field>
->>>>>>> master
                 <Button
                   variant="accent"
                   size="lg"
@@ -242,20 +110,12 @@ export default function Node({
                   className="w-full sm:w-auto"
                 >
                   <UserPlus className="h-4 w-4" />
-<<<<<<< HEAD
                   Mở form thêm nhân viên
-=======
-                  Tạo nhân viên
->>>>>>> master
                 </Button>
               </div>
             </Panel>
 
-<<<<<<< HEAD
             <Panel title="Tạo hợp đồng" subtitle="POST `/node/contracts`">
-=======
-            <Panel title="Tạo hợp đồng">
->>>>>>> master
               {contractFormError && (
                 <div className="mb-2 rounded-xl bg-[#f3d9d2] px-3 py-2 text-sm text-[#8a3828]">
                   {contractFormError}
@@ -266,7 +126,10 @@ export default function Node({
                 onSubmit={(event) => {
                   event.preventDefault();
                   const err = validateContractForm(contractForm);
-                  if (err) { setContractFormError(err); return; }
+                  if (err) {
+                    setContractFormError(err);
+                    return;
+                  }
                   setContractFormError('');
                   runAction('create-contract', () => nodeApi.createContract(contractForm), () =>
                     setContractForm(defaultContractForm),
@@ -287,8 +150,10 @@ export default function Node({
                     required
                   >
                     <option value="">-- Chọn nhân viên ({localEmployees?.length || 0}) --</option>
-                    {localEmployees?.map(e => (
-                      <option key={e.MaNhanVien} value={e.MaNhanVien}>{e.MaNhanVien} — {e.HoTen}</option>
+                    {localEmployees?.map((employee) => (
+                      <option key={employee.MaNhanVien} value={employee.MaNhanVien}>
+                        {employee.MaNhanVien} — {employee.HoTen}
+                      </option>
                     ))}
                   </Select>
                 </Field>
@@ -299,8 +164,13 @@ export default function Node({
                     required
                   >
                     <option value="">-- Chọn loại hợp đồng ({nodeData?.contractTypes?.length || 0}) --</option>
-                    {nodeData?.contractTypes?.map(ct => (
-                      <option key={ct.MaLoaiHopDong || ct.maLoaiHopDong} value={ct.MaLoaiHopDong || ct.maLoaiHopDong}>{ct.TenLoaiHopDong || ct.tenLoaiHopDong}</option>
+                    {nodeData?.contractTypes?.map((contractType) => (
+                      <option
+                        key={contractType.MaLoaiHopDong || contractType.maLoaiHopDong}
+                        value={contractType.MaLoaiHopDong || contractType.maLoaiHopDong}
+                      >
+                        {contractType.TenLoaiHopDong || contractType.tenLoaiHopDong}
+                      </option>
                     ))}
                   </Select>
                 </Field>
@@ -339,10 +209,7 @@ export default function Node({
 
           <Panel
             title="Bộ lọc báo cáo local"
-<<<<<<< HEAD
             subtitle="GET `/node/reports/local`"
-=======
->>>>>>> master
             action={
               <Button
                 variant="secondary"
@@ -398,12 +265,8 @@ export default function Node({
                       </div>
                     ),
                   },
-<<<<<<< HEAD
-                  { key: 'TenPhongBan', label: 'Phong ban' },
-                  { key: 'TenChucVu', label: 'Chuc vu' },
-=======
                   { key: 'TenPhongBan', label: 'Phòng ban' },
->>>>>>> master
+                  { key: 'TenChucVu', label: 'Chức vụ' },
                   { key: 'Email', label: 'Email' },
                 ]}
                 rows={localEmployees}
@@ -440,8 +303,8 @@ export default function Node({
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={(formData) => {
           runAction('create-employee', () => nodeApi.createEmployee(formData), () => {
-            const dept = SEED_DEPARTMENTS.find(d => d.MaPhongBan === formData.maPhongBan);
-            const pos = SEED_POSITIONS.find(p => p.MaChucVu === formData.maChucVu);
+            const dept = SEED_DEPARTMENTS.find((department) => department.MaPhongBan === formData.maPhongBan);
+            const pos = SEED_POSITIONS.find((position) => position.MaChucVu === formData.maChucVu);
             if (saveEmpMeta) {
               saveEmpMeta(formData.maNhanVien, {
                 sdt: formData.sdt,
@@ -462,7 +325,7 @@ export default function Node({
         submittingKey={submittingKey}
         isNode={true}
         initialMaChiNhanh={branchCode}
-        existingIds={localEmployees.map(r => r.MaNhanVien)}
+        existingIds={localEmployees.map((row) => row.MaNhanVien)}
         departments={availableDepts}
         positions={availablePositions}
       />

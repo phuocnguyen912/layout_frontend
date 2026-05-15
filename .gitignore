@@ -30,3 +30,18 @@ Thumbs.db
 *.swp
 *.swo
 
+# sync
+./sync
+
+# temp
+.codex-postcss-temp/
+
+# postcss package
+postcss-*.tgz
+
+# sync feature
+src/components/sync/
+src/hooks/useSyncState.js
+src/utils/syncLogic.js
+src/test/syncLogic.test.js
+src/pages/Sync.jsx
