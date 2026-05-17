@@ -36,7 +36,7 @@ export function formatCurrency(value) {
 }
 
 export function formatDateTime(value) {
-  if (!value) return 'Chua co';
+  if (!value) return 'Chưa có';
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);

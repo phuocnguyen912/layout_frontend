@@ -7,7 +7,7 @@ import Button from '../Button';
 
 export default function ContractFormPanel({ form, setForm, onSubmit, submitting }) {
   return (
-    <Panel title="Tạo hợp đồng local" subtitle="POST `/node/contracts`">
+    <Panel title="Tạo hợp đồng" subtitle="Lập hợp đồng lao động tại chi nhánh hiện tại.">
       <form
         className="grid gap-4 md:grid-cols-2"
         onSubmit={(event) => {
@@ -15,21 +15,21 @@ export default function ContractFormPanel({ form, setForm, onSubmit, submitting 
           onSubmit();
         }}
       >
-        <Field label="Ma hop dong">
+        <Field label="Mã hợp đồng">
           <Input
             value={form.maHopDong}
             onChange={(event) => setForm({ ...form, maHopDong: event.target.value })}
             required
           />
         </Field>
-        <Field label="Ma nhan vien">
+        <Field label="Mã nhân viên">
           <Input
             value={form.maNhanVien}
             onChange={(event) => setForm({ ...form, maNhanVien: event.target.value })}
             required
           />
         </Field>
-        <Field label="Loai hop dong">
+        <Field label="Loại hợp đồng">
           <Input
             value={form.maLoaiHopDong}
             onChange={(event) => setForm({ ...form, maLoaiHopDong: event.target.value })}

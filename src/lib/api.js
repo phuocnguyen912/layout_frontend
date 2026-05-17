@@ -133,6 +133,8 @@ export function createPublisherApi(profileKey, token) {
     syncMonitor: () => request(profileKey, '/publisher/sync-monitor?thresholdMinutes=30', { token }),
     createBranch: (body) => request(profileKey, '/publisher/branches', { method: 'POST', token, body }),
     createPosition: (body) => request(profileKey, '/publisher/positions', { method: 'POST', token, body }),
+    updatePosition: (maChucVu, body) =>
+      request(profileKey, `/publisher/positions/${encodeURIComponent(maChucVu)}`, { method: 'PUT', token, body }),
     createContractType: (body) =>
       request(profileKey, '/publisher/contract-types', { method: 'POST', token, body }),
     createAccount: (body) => request(profileKey, '/publisher/accounts', { method: 'POST', token, body }),
@@ -163,6 +165,20 @@ export function createNodeApi(profileKey, token) {
     listPositions: () => request(profileKey, '/node/positions', { token }),
     listContractTypes: () => request(profileKey, '/node/contract-types', { token }),
     listDepartments: () => request(profileKey, '/node/departments', { token }),
+    listContracts: (params = {}) => {
+      const query = new URLSearchParams();
+      if (params.maNhanVien) query.set('maNhanVien', params.maNhanVien);
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return request(profileKey, `/node/contracts${suffix}`, { token });
+    },
+    listSalaries: (params = {}) => {
+      const query = new URLSearchParams();
+      if (params.maNhanVien) query.set('maNhanVien', params.maNhanVien);
+      if (params.thang) query.set('thang', String(params.thang));
+      if (params.nam) query.set('nam', String(params.nam));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return request(profileKey, `/node/salaries${suffix}`, { token });
+    },
 
     listEmployees: (keyword = '') =>
       request(

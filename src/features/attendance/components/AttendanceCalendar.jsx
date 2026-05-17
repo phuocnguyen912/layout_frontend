@@ -16,24 +16,24 @@ function cellClass(cell) {
 }
 
 function labelForCell(status) {
-  if (!status) return 'Khong co du lieu';
-  if (status === 'LEAVE') return 'Nghi phep';
-  if (status === 'LATE') return 'Di tre';
-  if (status === 'INCOMPLETE') return 'Chua check-out';
-  if (status === 'Du gio') return 'Du gio';
-  if (status === 'ON_TIME') return 'Dung gio';
-  if (status === 'CHECKED_OUT') return 'Da check-out';
+  if (!status) return 'Không có dữ liệu';
+  if (status === 'LEAVE') return 'Nghỉ phép';
+  if (status === 'LATE') return 'Đi trễ';
+  if (status === 'INCOMPLETE') return 'Chưa chấm ra';
+  if (status === 'Du gio') return 'Đủ giờ';
+  if (status === 'ON_TIME') return 'Đúng giờ';
+  if (status === 'CHECKED_OUT') return 'Đã chấm ra';
   return status;
 }
 
 export default function AttendanceCalendar({ cells }) {
   return (
-    <Panel title="Calendar cham cong" subtitle="Highlight theo du lieu attendance va leave da duyet trong bo loc hien tai.">
+    <Panel title="Lịch chấm công" subtitle="Tô màu theo dữ liệu chấm công và nghỉ phép đã duyệt trong bộ lọc hiện tại.">
       <div className="mb-4 flex flex-wrap gap-2 text-xs text-[var(--hr-muted)]">
-        <span className="rounded-full bg-[#eef4e6] px-3 py-1 text-[#4f5a3d]">Co mat</span>
-        <span className="rounded-full bg-[#fbf2e2] px-3 py-1 text-[#94652b]">Di tre</span>
-        <span className="rounded-full bg-[#fbefec] px-3 py-1 text-[#964637]">Nghi phep</span>
-        <span className="rounded-full bg-[#fffaf5] px-3 py-1 text-[#6d6258]">Khac</span>
+        <span className="rounded-full bg-[#eef4e6] px-3 py-1 text-[#4f5a3d]">Có mặt</span>
+        <span className="rounded-full bg-[#fbf2e2] px-3 py-1 text-[#94652b]">Đi trễ</span>
+        <span className="rounded-full bg-[#fbefec] px-3 py-1 text-[#964637]">Nghỉ phép</span>
+        <span className="rounded-full bg-[#fffaf5] px-3 py-1 text-[#6d6258]">Khác</span>
       </div>
 
       <div className="grid grid-cols-7 gap-3">
@@ -46,7 +46,7 @@ export default function AttendanceCalendar({ cells }) {
           <div key={cell.key} className={cellClass(cell)}>
             <div className="flex items-start justify-between gap-2">
               <span className="text-sm font-semibold">{cell.day}</span>
-              {cell.isSelected ? <span className="rounded-full bg-[#b55233] px-2 py-0.5 text-[10px] text-white">Loc</span> : null}
+              {cell.isSelected ? <span className="rounded-full bg-[#b55233] px-2 py-0.5 text-[10px] text-white">Lọc</span> : null}
             </div>
             <p className="mt-3 text-xs">{labelForCell(cell.status)}</p>
           </div>

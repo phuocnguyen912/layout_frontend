@@ -54,7 +54,7 @@ export default function Attendance({
       .catch((error) => {
         if (active) {
           setLeaves([]);
-          setLeaveError(error.message || 'Khong tai duoc danh sach nghi phep.');
+          setLeaveError(error.message || 'Không tải được danh sách nghỉ phép.');
         }
       });
 
@@ -81,11 +81,11 @@ export default function Attendance({
       <>
         <SectionHeader
           eyebrow="Attendance"
-          title="Cham cong"
-          description="Module nay chi hoat dong trong profile chi nhanh va bam sat flow attendance cua backend node."
+          title="Chấm công"
+          description="Module này chỉ hoạt động trong profile chi nhánh và bám sát nghiệp vụ chấm công của backend node."
         />
-        <Panel title="Can profile node" subtitle="Attendance la endpoint cua node.">
-          <p className="text-sm text-[var(--hr-muted)]">Dang nhap moi truong chi nhanh de su dung module cham cong.</p>
+        <Panel title="Cần profile chi nhánh" subtitle="Đăng nhập vào môi trường chi nhánh để thao tác chấm công.">
+          <p className="text-sm text-[var(--hr-muted)]">Đăng nhập môi trường chi nhánh để sử dụng module chấm công.</p>
         </Panel>
       </>
     );
@@ -95,8 +95,8 @@ export default function Attendance({
     <>
       <SectionHeader
         eyebrow="Attendance"
-        title="Cham cong"
-        description="Module attendance da duoc tach rieng theo 3 flow backend: check-in, check-out va tra cuu lich su theo nhan vien + khoang ngay."
+        title="Chấm công"
+        description="Module chấm công gồm ba luồng chính: chấm vào, chấm ra và tra cứu lịch sử theo nhân viên trong khoảng ngày."
       />
 
       <div className="space-y-6">
@@ -111,8 +111,8 @@ export default function Attendance({
         <div className="grid gap-6 xl:grid-cols-2">
           <AttendanceCheckForm
             type="checkin"
-            title="Cham cong vao"
-            subtitle="POST /node/attendance/check-in"
+            title="Chấm công vào"
+            subtitle="Ghi nhận giờ vào làm của nhân viên."
             employees={localEmployees}
             form={actions.checkInForm}
             setForm={actions.setCheckInForm}
@@ -124,8 +124,8 @@ export default function Attendance({
 
           <AttendanceCheckForm
             type="checkout"
-            title="Cham cong ra"
-            subtitle="POST /node/attendance/check-out"
+            title="Chấm công ra"
+            subtitle="Ghi nhận giờ ra và hoàn tất ngày công."
             employees={localEmployees}
             form={actions.checkOutForm}
             setForm={actions.setCheckOutForm}
@@ -138,9 +138,9 @@ export default function Attendance({
 
         {actions.retryableAction ? (
           <AttendanceErrorState
-            message="Phat hien loi timeout/network khi submit. Ban co the thu lai thao tac vua roi."
+            message="Phát hiện lỗi timeout hoặc mạng khi gửi dữ liệu. Bạn có thể thử lại thao tác vừa rồi."
             onRetry={actions.retryableAction}
-            retryLabel="Thu lai thao tac"
+            retryLabel="Thử lại thao tác"
           />
         ) : null}
 
@@ -148,16 +148,16 @@ export default function Attendance({
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">
-            <Panel title="Lich su cham cong" subtitle="GET /node/attendance/:maNhanVien?tuNgay&denNgay">
+            <Panel title="Lịch sử chấm công" subtitle="Tra cứu theo nhân viên và khoảng thời gian đã chọn.">
               {!appliedFilters.employeeId ? (
                 <AttendanceEmptyState
-                  title="Chon nhan vien de xem lich su"
-                  description="Backend hien tai yeu cau ma nhan vien trong endpoint attendance history."
+                  title="Chọn nhân viên để xem lịch sử"
+                  description="Hãy chọn nhân viên và kỳ thời gian cần tra cứu."
                 />
               ) : history.error ? (
                 <AttendanceErrorState message={history.error} onRetry={history.retry} />
               ) : history.loading ? (
-                <p className="text-sm text-[var(--hr-muted)]">Dang tai lich su cham cong...</p>
+                <p className="text-sm text-[var(--hr-muted)]">Đang tải lịch sử chấm công...</p>
               ) : (
                 <AttendanceHistoryTable rows={history.rows} />
               )}
@@ -173,8 +173,8 @@ export default function Attendance({
 
         {!canQueryHistory ? (
           <AttendanceEmptyState
-            title="Bo loc chua du thong tin"
-            description="Hay chon nhan vien va ngay hoac thang de frontend sinh tuNgay-denNgay dung voi flow backend."
+            title="Bộ lọc chưa đủ thông tin"
+            description="Hãy chọn nhân viên và ngày hoặc tháng để tra cứu lịch sử chấm công."
           />
         ) : null}
       </div>

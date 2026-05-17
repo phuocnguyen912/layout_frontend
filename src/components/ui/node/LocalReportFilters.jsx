@@ -8,8 +8,8 @@ import Button from '../Button';
 export default function LocalReportFilters({ filters, setFilters, onRefresh, submitting }) {
   return (
     <Panel
-      title="Bộ lọc báo cáo local"
-      subtitle="GET `/node/reports/local`"
+      title="Bộ lọc báo cáo chi nhánh"
+      subtitle="Lọc dữ liệu nhân sự, chấm công và lương theo kỳ báo cáo."
       action={
         <Button
           variant="secondary"
@@ -26,7 +26,7 @@ export default function LocalReportFilters({ filters, setFilters, onRefresh, sub
           <Input
             value={filters.keyword}
             onChange={(event) => setFilters({ ...filters, keyword: event.target.value })}
-            placeholder="Mã hoặc tên NV..."
+            placeholder="Mã hoặc tên nhân viên..."
           />
         </Field>
         <Field label="Tháng">

@@ -30,7 +30,7 @@ export default function AttendanceCheckForm({
   const buttonIcon = isCheckIn ? CheckCircle2 : Clock3;
   const ButtonIcon = buttonIcon;
   const timeKey = isCheckIn ? 'gioVao' : 'gioRa';
-  const timeLabel = isCheckIn ? 'Gio vao (HH:mm:ss)' : 'Gio ra (HH:mm:ss)';
+  const timeLabel = isCheckIn ? 'Giờ vào (HH:mm:ss)' : 'Giờ ra (HH:mm:ss)';
 
   return (
     <Panel title={title} subtitle={subtitle}>
@@ -39,10 +39,10 @@ export default function AttendanceCheckForm({
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Ma nhan vien">
+        <Field label="Mã nhân viên">
           {(employees || []).length > 0 ? (
             <Select value={form.maNhanVien} onChange={(event) => setForm({ ...form, maNhanVien: event.target.value })}>
-              <option value="">-- Chon nhan vien --</option>
+              <option value="">-- Chọn nhân viên --</option>
               {(employees || []).map((employee) => (
                 <option key={employee.MaNhanVien} value={employee.MaNhanVien}>
                   {employee.MaNhanVien} - {employee.HoTen}
@@ -53,12 +53,12 @@ export default function AttendanceCheckForm({
             <Input
               value={form.maNhanVien}
               onChange={(event) => setForm({ ...form, maNhanVien: event.target.value })}
-              placeholder="Nhap ma nhan vien"
+              placeholder="Nhập mã nhân viên"
             />
           )}
         </Field>
 
-        <Field label="Ngay">
+        <Field label="Ngày">
           <Input type="date" value={form.ngay} onChange={(event) => setForm({ ...form, ngay: event.target.value })} />
         </Field>
 
@@ -78,20 +78,20 @@ export default function AttendanceCheckForm({
         onClick={onSubmit}
       >
         <ButtonIcon className="h-4 w-4" />
-        {isCheckIn ? 'Cham cong vao' : 'Cham cong ra'}
+        {isCheckIn ? 'Chấm công vào' : 'Chấm công ra'}
       </Button>
 
       {result ? (
         <ResultBox>
           {isCheckIn ? (
             <>
-              Cham vao thanh cong - <strong>{result.maNhanVien}</strong> ngay <strong>{result.ngay}</strong> -
-              Trang thai: <StatusPill status={result.trangThai} />
+              Chấm vào thành công - <strong>{result.maNhanVien}</strong> ngày <strong>{result.ngay}</strong> -
+              Trạng thái: <StatusPill status={result.trangThai} />
             </>
           ) : (
             <>
-              Cham ra thanh cong - <strong>{result.maNhanVien}</strong> ngay <strong>{result.ngay}</strong> -
-              Gio ra: <strong>{String(result.gioRa || '').split(' ')[0]}</strong>
+              Chấm ra thành công - <strong>{result.maNhanVien}</strong> ngày <strong>{result.ngay}</strong> -
+              Giờ ra: <strong>{String(result.gioRa || '').split(' ')[0]}</strong>
             </>
           )}
         </ResultBox>

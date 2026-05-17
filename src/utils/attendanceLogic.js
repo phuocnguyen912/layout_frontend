@@ -11,16 +11,17 @@ function employeeNameMap(employees) {
 
 export function formatAttendanceStatus(status) {
   const statusMap = {
-    ON_TIME: 'Dung gio',
-    LATE: 'Di tre',
-    EARLY_LEAVE: 'Di som',
-    INCOMPLETE: 'Chua check-out',
-    'Du gio': 'Du gio',
-    PRESENT: 'Co mat',
-    LEAVE: 'Nghi phep',
+    ON_TIME: 'Đúng giờ',
+    LATE: 'Đi trễ',
+    EARLY_LEAVE: 'Đi sớm',
+    INCOMPLETE: 'Chưa chấm ra',
+    'Du gio': 'Đủ giờ',
+    'Đủ giờ': 'Đủ giờ',
+    PRESENT: 'Có mặt',
+    LEAVE: 'Nghỉ phép',
   };
 
-  return statusMap[status] || status || 'Khong ro';
+  return statusMap[status] || status || 'Không rõ';
 }
 
 export function buildAttendanceRows({ employees = [], attendance = [], leaves = [], latestEvents = [], filters = {} }) {

@@ -14,20 +14,20 @@ export default function AttendanceFilters({
 }) {
   return (
     <Panel
-      title="Bo loc cham cong"
-      subtitle="Loc theo nhan vien, ngay hoac thang. Frontend se convert sang tuNgay-denNgay theo flow backend."
+      title="Bộ lọc chấm công"
+      subtitle="Lọc theo nhân viên, ngày hoặc tháng để tra cứu lịch sử chấm công."
       action={
         <div className="flex gap-2">
           <Button variant="secondary" onClick={resetFilters}>Reset</Button>
-          <Button variant="accent" onClick={applyFilters}>Ap dung</Button>
+          <Button variant="accent" onClick={applyFilters}>Áp dụng</Button>
         </div>
       }
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Field label="Nhan vien">
+        <Field label="Nhân viên">
           {(employees || []).length > 0 ? (
             <Select value={filters.employeeId} onChange={(event) => updateFilter('employeeId', event.target.value)}>
-              <option value="">-- Chon nhan vien --</option>
+              <option value="">-- Chọn nhân viên --</option>
               {(employees || []).map((employee) => (
                 <option key={employee.MaNhanVien} value={employee.MaNhanVien}>
                   {employee.MaNhanVien} - {employee.HoTen}
@@ -38,20 +38,20 @@ export default function AttendanceFilters({
             <Input
               value={filters.employeeId}
               onChange={(event) => updateFilter('employeeId', event.target.value)}
-              placeholder="Nhap ma nhan vien"
+              placeholder="Nhập mã nhân viên"
             />
           )}
         </Field>
 
-        <Field label="Che do loc">
+        <Field label="Chế độ lọc">
           <Select value={filters.filterMode} onChange={(event) => updateFilter('filterMode', event.target.value)}>
-            <option value={ATTENDANCE_FILTER_MODE.DAY}>Theo ngay</option>
-            <option value={ATTENDANCE_FILTER_MODE.MONTH}>Theo thang</option>
+            <option value={ATTENDANCE_FILTER_MODE.DAY}>Theo ngày</option>
+            <option value={ATTENDANCE_FILTER_MODE.MONTH}>Theo tháng</option>
           </Select>
         </Field>
 
         {filters.filterMode === ATTENDANCE_FILTER_MODE.DAY ? (
-          <Field label="Ngay">
+          <Field label="Ngày">
             <Input
               type="date"
               value={filters.selectedDate}
@@ -59,7 +59,7 @@ export default function AttendanceFilters({
             />
           </Field>
         ) : (
-          <Field label="Thang">
+          <Field label="Tháng">
             <Input
               type="month"
               value={filters.selectedMonth}

@@ -4,14 +4,14 @@ import { todayValue } from '../utils/attendanceFilters';
 import { isRetryableAttendanceError } from '../utils/attendanceRetry';
 
 function validateEmployeeId(value) {
-  if (!value?.trim()) return 'Ma nhan vien khong duoc de trong.';
-  if (value.trim().length > 10) return 'Ma nhan vien toi da 10 ky tu.';
+  if (!value?.trim()) return 'Mã nhân viên không được để trống.';
+  if (value.trim().length > 10) return 'Mã nhân viên tối đa 10 ký tự.';
   return '';
 }
 
 function validateTime(value) {
-  if (!value?.trim()) return 'Gio khong duoc de trong.';
-  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(value.trim())) return 'Dinh dang gio phai la HH:mm hoac HH:mm:ss.';
+  if (!value?.trim()) return 'Giờ không được để trống.';
+  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(value.trim())) return 'Định dạng giờ phải là HH:mm hoặc HH:mm:ss.';
   return '';
 }
 
@@ -50,7 +50,7 @@ export default function useAttendanceActions({ nodeApi, onSuccess }) {
   function submitIn() {
     const nextError =
       validateEmployeeId(checkInForm.maNhanVien) ||
-      (!checkInForm.ngay ? 'Ngay khong duoc de trong.' : '') ||
+      (!checkInForm.ngay ? 'Ngày không được để trống.' : '') ||
       validateTime(checkInForm.gioVao);
 
     if (nextError) {
@@ -71,7 +71,7 @@ export default function useAttendanceActions({ nodeApi, onSuccess }) {
   function submitOut() {
     const nextError =
       validateEmployeeId(checkOutForm.maNhanVien) ||
-      (!checkOutForm.ngay ? 'Ngay khong duoc de trong.' : '') ||
+      (!checkOutForm.ngay ? 'Ngày không được để trống.' : '') ||
       validateTime(checkOutForm.gioRa);
 
     if (nextError) {
