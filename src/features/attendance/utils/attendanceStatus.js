@@ -1,5 +1,9 @@
 import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_LABEL } from '../constants/attendanceConstants';
 
+function isFullDayStatus(status) {
+  return status === ATTENDANCE_STATUS.FULL_DAY || status === 'Du gio';
+}
+
 export function formatAttendanceStatus(status) {
   if (!status) return ATTENDANCE_STATUS_LABEL.UNKNOWN;
   return ATTENDANCE_STATUS_LABEL[status] || status;
@@ -11,7 +15,7 @@ export function getAttendanceTone(status) {
   if (
     status === ATTENDANCE_STATUS.ON_TIME ||
     status === ATTENDANCE_STATUS.CHECKED_OUT ||
-    status === ATTENDANCE_STATUS.FULL_DAY
+    isFullDayStatus(status)
   ) {
     return 'success';
   }
@@ -23,7 +27,7 @@ export function resolveCalendarStatus(record) {
   if (record.isLeave) return ATTENDANCE_STATUS.LEAVE;
   if (record.status === ATTENDANCE_STATUS.LATE) return ATTENDANCE_STATUS.LATE;
   if (record.isIncomplete) return ATTENDANCE_STATUS.INCOMPLETE;
-  if (record.status === ATTENDANCE_STATUS.FULL_DAY) return ATTENDANCE_STATUS.FULL_DAY;
+  if (isFullDayStatus(record.status)) return 'Du gio';
   if (record.status === ATTENDANCE_STATUS.CHECKED_OUT) return ATTENDANCE_STATUS.CHECKED_OUT;
   if (record.status === ATTENDANCE_STATUS.ON_TIME) return ATTENDANCE_STATUS.ON_TIME;
   return ATTENDANCE_STATUS.UNKNOWN;

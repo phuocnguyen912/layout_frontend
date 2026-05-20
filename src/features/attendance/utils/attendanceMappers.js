@@ -1,6 +1,10 @@
 import { ATTENDANCE_STATUS } from '../constants/attendanceConstants';
 import { formatAttendanceStatus } from './attendanceStatus';
 
+function formatLocalDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function normalizeDate(value) {
   if (!value) return '';
   const raw = String(value);
@@ -8,7 +12,7 @@ function normalizeDate(value) {
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return raw.slice(0, 10);
-  return date.toISOString().slice(0, 10);
+  return formatLocalDate(date);
 }
 
 function normalizeTime(value) {
@@ -64,7 +68,7 @@ export function mapApprovedLeaveDates(leaves = [], range) {
     const limit = new Date(`${end}T00:00:00`);
 
     while (cursor <= limit) {
-      const current = cursor.toISOString().slice(0, 10);
+      const current = formatLocalDate(cursor);
       if (!range || (current >= range.tuNgay && current <= range.denNgay)) {
         dates.add(current);
       }

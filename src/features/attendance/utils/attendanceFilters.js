@@ -5,7 +5,8 @@ function pad(value) {
 }
 
 export function todayValue() {
-  return new Date().toISOString().slice(0, 10);
+  const today = new Date();
+  return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 }
 
 export function monthValueFromDate(dateValue = todayValue()) {

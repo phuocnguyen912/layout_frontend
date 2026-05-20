@@ -7,6 +7,11 @@ function ensureSeconds(timeValue) {
   return timeValue && String(timeValue).split(':').length === 2 ? `${timeValue}:00` : timeValue;
 }
 
+function toSqlTimePayload(timeValue) {
+  const normalized = ensureSeconds(timeValue);
+  return normalized ? `1970-01-01T${normalized}Z` : normalized;
+}
+
 async function withTimeout(factory, timeoutMs = ATTENDANCE_REQUEST_TIMEOUT_MS) {
   let timeoutId;
 
@@ -46,7 +51,7 @@ export async function submitCheckIn(nodeApi, payload) {
       nodeApi.checkIn({
         maNhanVien: payload.maNhanVien.trim(),
         ngay: payload.ngay,
-        gioVao: `${ensureSeconds(payload.gioVao)} 1/1/1970`,
+        gioVao: toSqlTimePayload(payload.gioVao),
       }),
     );
   } catch (error) {
@@ -60,7 +65,7 @@ export async function submitCheckOut(nodeApi, payload) {
       nodeApi.checkOut({
         maNhanVien: payload.maNhanVien.trim(),
         ngay: payload.ngay,
-        gioRa: `${ensureSeconds(payload.gioRa)} 1/1/1970`,
+        gioRa: toSqlTimePayload(payload.gioRa),
       }),
     );
   } catch (error) {
