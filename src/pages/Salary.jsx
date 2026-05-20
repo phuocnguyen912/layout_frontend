@@ -48,20 +48,20 @@ export default function Salary({
 
     setEmployees(localEmployees || []);
 
-    if (!nodeApi?.localReport) {
+    if (!nodeApi?.listSalaries) {
       setSalaries(nodeData?.report?.payroll || []);
       return;
     }
 
     setLoading(true);
     nodeApi
-      .localReport({
+      .listSalaries({
         thang: filters.thang,
         nam: filters.nam,
-        keyword: filters.maNhanVien || '',
+        maNhanVien: filters.maNhanVien || '',
       })
       .then((result) => {
-        setSalaries(result?.payroll || []);
+        setSalaries(result || []);
       })
       .catch(() => {
         setSalaries(nodeData?.report?.payroll || []);
