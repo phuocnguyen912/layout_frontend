@@ -26,9 +26,11 @@ export default function Salary({
   isNode,
   publisherData,
   nodeApi,
+  nodeData,
   runAction,
   submittingKey,
   payrollChartData,
+  localEmployees = [],
 }) {
   const [form, setForm] = useState(defaultSalaryForm);
   const [filters, setFilters] = useState({
@@ -42,18 +44,30 @@ export default function Salary({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!isNode || !nodeApi) return;
+    if (!isNode) return;
+
+    setEmployees(localEmployees || []);
+
+    if (!nodeApi?.localReport) {
+      setSalaries(nodeData?.report?.payroll || []);
+      return;
+    }
+
     setLoading(true);
-    Promise.all([
-      nodeApi.listEmployees?.().catch(() => []),
-      nodeApi.listSalaries?.(filters).catch(() => []),
-    ])
-      .then(([employeeRows, salaryRows]) => {
-        setEmployees(employeeRows || []);
-        setSalaries(salaryRows || []);
+    nodeApi
+      .localReport({
+        thang: filters.thang,
+        nam: filters.nam,
+        keyword: filters.maNhanVien || '',
+      })
+      .then((result) => {
+        setSalaries(result?.payroll || []);
+      })
+      .catch(() => {
+        setSalaries(nodeData?.report?.payroll || []);
       })
       .finally(() => setLoading(false));
-  }, [isNode, nodeApi, filters, reloadKey]);
+  }, [isNode, nodeApi, nodeData, filters, reloadKey, localEmployees]);
 
   const employeeOptions = useMemo(
     () =>
