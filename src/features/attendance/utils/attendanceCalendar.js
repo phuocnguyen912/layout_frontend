@@ -2,10 +2,20 @@ import { ATTENDANCE_FILTER_MODE, ATTENDANCE_STATUS } from '../constants/attendan
 import { getMonthRange } from './attendanceFilters';
 import { resolveCalendarStatus } from './attendanceStatus';
 
+function pad(value) {
+  return String(value).padStart(2, '0');
+}
+
+function formatLocalDate(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 function createCalendarCell(date, isCurrentMonth) {
+  const dateValue = formatLocalDate(date);
+
   return {
-    key: date.toISOString().slice(0, 10),
-    date: date.toISOString().slice(0, 10),
+    key: dateValue,
+    date: dateValue,
     day: date.getDate(),
     weekday: date.getDay(),
     isCurrentMonth,
@@ -36,7 +46,7 @@ export function buildAttendanceCalendarCells({ filters, rows, leaveDates }) {
   const cursor = new Date(start);
 
   while (cursor <= end) {
-    const dateKey = cursor.toISOString().slice(0, 10);
+    const dateKey = formatLocalDate(cursor);
     const isCurrentMonth = dateKey.slice(0, 7) === monthRef;
     const record = rowMap.get(dateKey);
     const cell = createCalendarCell(cursor, isCurrentMonth);
